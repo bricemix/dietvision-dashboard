@@ -1,0 +1,71 @@
+<% content_for :title, "Configuration" %>
+
+<div class="max-w-2xl">
+  <%= form_with url: admin_configs_path, method: :post, class: "space-y-4" do |f| %>
+
+    <% @configs.each do |cfg| %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <label class="block text-sm font-medium text-gray-200 mb-1">
+          <%= cfg[:description] || cfg[:key] %>
+        </label>
+        <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+
+        <% is_secret = cfg[:key].include?("api_key") %>
+        <% field_name = "configs[#{cfg[:key]}]" %>
+        <% field_class = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono" %>
+
+        <% if is_secret %>
+          <input type="password"
+                 name="<%= field_name %>"
+                 placeholder="<%= cfg[:value].present? ? '••••••••••• (défini)' : 'Non configuré' %>"
+                 class="<%= field_class %>">
+        <% else %>
+          <input type="text"
+                 name="<%= field_name %>"
+                 value="<%= cfg[:value] %>"
+                 class="<%= field_class %>">
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="flex items-center gap-4 pt-2">
+      <%= f.submit "💾 Sauvegarder la configuration",
+            class: "px-6 py-2.5 btn-primary rounded-lg text-sm cursor-pointer transition-colors" %>
+
+      <button type="button" id="test-btn" onclick="testOpenRouter()"
+              class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm rounded-lg cursor-pointer transition-colors">
+        Tester la connexion
+      </button>
+
+      <span id="test-result" class="text-sm" style="color:#9ca3af"></span>
+    </div>
+  <% end %>
+</div>
+
+<script>
+async function testOpenRouter() {
+  const btn = document.getElementById('test-btn')
+  const result = document.getElementById('test-result')
+  btn.disabled = true
+  result.textContent = 'Test en cours…'
+  result.style.color = '#9ca3af'
+
+  try {
+    const res = await fetch('<%= admin_test_openrouter_path %>', {
+      headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
+    })
+    const data = await res.json()
+    if (data.ok) {
+      result.textContent = '✓ Connexion OK — ' + data.models.slice(0, 3).join(', ')
+      result.style.color = '#C8FF00'
+    } else {
+      result.textContent = '✗ ' + data.error
+      result.style.color = '#f87171'
+    }
+  } catch (e) {
+    result.textContent = '✗ Erreur réseau'
+    result.style.color = '#f87171'
+  }
+  btn.disabled = false
+}
+</script>

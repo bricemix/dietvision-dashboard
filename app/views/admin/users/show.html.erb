@@ -1,0 +1,128 @@
+<% content_for :title, "Profil utilisateur" %>
+
+<div class="mb-4">
+  <%= link_to "← Retour aux utilisateurs", admin_users_path,
+        class: "text-sm text-gray-500 hover:underline transition-colors" %>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+  <%# ── Fiche profil ──────────────────────────────────────── %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 col-span-1">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="text-base font-semibold text-white"><%= @user.name %></h2>
+        <div class="text-sm text-gray-500 mt-0.5"><%= @user.email %></div>
+        <div class="text-sm text-gray-500"><%= @user.phone %></div>
+      </div>
+      <%= status_badge(@user.status) %>
+    </div>
+
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between text-gray-400">
+        <span>Pays</span>
+        <span class="text-gray-200"><%= @user.country %></span>
+      </div>
+      <div class="flex justify-between text-gray-400">
+        <span>Plan</span>
+        <%= status_badge(@user.plan) %>
+      </div>
+      <% if @user.subscription_expires_at %>
+        <div class="flex justify-between text-gray-400">
+          <span>Expire le</span>
+          <span class="text-gray-200"><%= @user.subscription_expires_at.strftime("%d/%m/%Y") %></span>
+        </div>
+      <% end %>
+      <div class="flex justify-between text-gray-400">
+        <span>Inscrit le</span>
+        <span class="text-gray-200"><%= @user.created_at.strftime("%d/%m/%Y") %></span>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-4 border-t border-gray-800">
+      <% if @user.status == "active" %>
+        <%= button_to "Suspendre", suspend_admin_user_path(@user), method: :post,
+              class: "w-full py-2 text-xs bg-red-950 hover:bg-red-900/60 text-red-400
+                      rounded-lg border border-red-900 cursor-pointer transition-colors" %>
+      <% else %>
+        <%= button_to "Réactiver", activate_admin_user_path(@user), method: :post,
+              class: "w-full py-2 text-xs rounded-lg border cursor-pointer transition-colors",
+              style: "background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)" %>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Stats rapides ─────────────────────────────────────── %>
+  <div class="lg:col-span-2 grid grid-cols-2 gap-4">
+    <%= stat_card "Appels API (mois)", @user.api_calls_this_month,                    icon_api,     "text-yellow-400" %>
+    <%= stat_card "Total dépensé",     format_xof(@user.total_spent),                 icon_money,   "lime" %>
+    <%= stat_card "Abonnements",       @subscriptions.count,                          icon_refresh, "text-blue-400" %>
+    <%= stat_card "Paiements réussis", @payments.count { _1.status == "success" },    icon_check,   "lime" %>
+  </div>
+</div>
+
+<%# ── Abonnements ────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-4">
+  <div class="px-5 py-4 border-b border-gray-800">
+    <h3 class="text-sm font-semibold text-gray-200">Abonnements</h3>
+  </div>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-2 font-medium">Plan</th>
+        <th class="text-left px-4 py-2 font-medium">Montant</th>
+        <th class="text-left px-4 py-2 font-medium">Statut</th>
+        <th class="text-left px-4 py-2 font-medium">Début</th>
+        <th class="text-left px-4 py-2 font-medium">Fin</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @subscriptions.each do |sub| %>
+        <tr>
+          <td class="px-5 py-3 text-gray-200"><%= sub.label %></td>
+          <td class="px-4 py-3 text-gray-400"><%= format_xof(sub.amount) %></td>
+          <td class="px-4 py-3"><%= status_badge(sub.status) %></td>
+          <td class="px-4 py-3 text-gray-400 text-xs"><%= sub.starts_at&.strftime("%d/%m/%Y") || "—" %></td>
+          <td class="px-4 py-3 text-gray-400 text-xs"><%= sub.expires_at&.strftime("%d/%m/%Y") || "—" %></td>
+        </tr>
+      <% end %>
+      <% if @subscriptions.empty? %>
+        <tr><td colspan="5" class="px-5 py-8 text-center text-gray-600">Aucun abonnement</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%# ── Derniers appels API ────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800">
+  <div class="px-5 py-4 border-b border-gray-800">
+    <h3 class="text-sm font-semibold text-gray-200">Derniers appels API</h3>
+  </div>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-2 font-medium">Endpoint</th>
+        <th class="text-left px-4 py-2 font-medium">Modèle</th>
+        <th class="text-left px-4 py-2 font-medium">Tokens</th>
+        <th class="text-left px-4 py-2 font-medium">Coût</th>
+        <th class="text-left px-4 py-2 font-medium">Statut</th>
+        <th class="text-left px-4 py-2 font-medium">Date</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @api_usages.each do |u| %>
+        <tr>
+          <td class="px-5 py-2.5 text-gray-300 font-mono text-xs"><%= u.endpoint %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs truncate max-w-[140px]"><%= u.model %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= u.input_tokens %>+<%= u.output_tokens %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= format_usd(u.cost_usd) %></td>
+          <td class="px-4 py-2.5"><%= status_badge(u.status) %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.created_at.strftime("%d/%m %H:%M") %></td>
+        </tr>
+      <% end %>
+      <% if @api_usages.empty? %>
+        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-600">Aucun appel API</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

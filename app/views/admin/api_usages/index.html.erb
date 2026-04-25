@@ -1,0 +1,60 @@
+<% content_for :title, "Utilisation API" %>
+
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <%= stat_card "Appels aujourd'hui", @calls_today,              icon_api,      "text-yellow-400" %>
+  <%= stat_card "Appels ce mois",     @calls_month,              icon_trend_up, "text-blue-400" %>
+  <%= stat_card "Coût ce mois",       format_usd(@total_cost_month), icon_money, "text-red-400" %>
+</div>
+
+<div class="mb-4 flex gap-3">
+  <%= form_with url: admin_api_usages_path, method: :get, class: "flex gap-3" do |f| %>
+    <%= f.select :endpoint,
+          [["Tous endpoints", ""], ["analyze_food", "analyze_food"], ["coach_chat", "coach_chat"]],
+          { selected: params[:endpoint] },
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    <%= f.select :status,
+          [["Tous statuts", ""], ["Succès", "success"], ["Erreur", "error"]],
+          { selected: params[:status] },
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    <%= f.submit "Filtrer",
+          class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+  <% end %>
+</div>
+
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-3 font-medium">Utilisateur</th>
+        <th class="text-left px-4 py-3 font-medium">Endpoint</th>
+        <th class="text-left px-4 py-3 font-medium">Modèle</th>
+        <th class="text-left px-4 py-3 font-medium">Tokens (in/out)</th>
+        <th class="text-left px-4 py-3 font-medium">Coût</th>
+        <th class="text-left px-4 py-3 font-medium">Durée</th>
+        <th class="text-left px-4 py-3 font-medium">Statut</th>
+        <th class="text-left px-4 py-3 font-medium">Date</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @usages.each do |u| %>
+        <tr class="hover:bg-gray-800/50 transition-colors">
+          <td class="px-5 py-2.5 text-gray-200 text-xs"><%= u.user.name %></td>
+          <td class="px-4 py-2.5 font-mono text-xs text-gray-300"><%= u.endpoint %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs truncate max-w-[160px]"><%= u.model %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= u.input_tokens %> / <%= u.output_tokens %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= format_usd(u.cost_usd) %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.duration_ms %>ms</td>
+          <td class="px-4 py-2.5"><%= status_badge(u.status) %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.created_at.strftime("%d/%m %H:%M") %></td>
+        </tr>
+      <% end %>
+      <% if @usages.empty? %>
+        <tr>
+          <td colspan="8" class="px-5 py-10 text-center text-gray-600">Aucun appel enregistré</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%= render "shared/pagination", pagy: @pagy %>

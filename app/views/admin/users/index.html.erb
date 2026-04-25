@@ -1,0 +1,69 @@
+<% content_for :title, "Utilisateurs" %>
+
+<div class="mb-6 flex items-center justify-between gap-4">
+  <%= form_with url: admin_users_path, method: :get, class: "flex gap-3 flex-1" do |f| %>
+    <%= f.text_field :q, value: params[:q], placeholder: "Rechercher nom ou email…",
+          class: "flex-1 max-w-xs px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm
+                  text-white placeholder-gray-500" %>
+    <%= f.select :plan, [["Tous les plans", ""], ["Gratuit", "free"], ["Premium", "premium"]],
+          { selected: params[:plan] },
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    <%= f.select :status, [["Tous statuts", ""], ["Actif", "active"], ["Suspendu", "suspended"]],
+          { selected: params[:status] },
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    <%= f.submit "Filtrer",
+          class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+  <% end %>
+  <div class="text-sm text-gray-500"><%= @pagy.count %> utilisateurs</div>
+</div>
+
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-3 font-medium">Utilisateur</th>
+        <th class="text-left px-4 py-3 font-medium">Pays</th>
+        <th class="text-left px-4 py-3 font-medium">Plan</th>
+        <th class="text-left px-4 py-3 font-medium">Statut</th>
+        <th class="text-left px-4 py-3 font-medium">Inscription</th>
+        <th class="text-right px-5 py-3 font-medium">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @users.each do |user| %>
+        <tr class="hover:bg-gray-800/50 transition-colors clickable"
+            onclick="window.location='<%= admin_user_path(user) %>'">
+          <td class="px-5 py-3">
+            <div class="font-medium text-gray-100"><%= user.name %></div>
+            <div class="text-xs text-gray-500"><%= user.email %></div>
+          </td>
+          <td class="px-4 py-3 text-gray-400"><%= user.country %></td>
+          <td class="px-4 py-3"><%= status_badge(user.plan) %></td>
+          <td class="px-4 py-3"><%= status_badge(user.status) %></td>
+          <td class="px-4 py-3 text-gray-400 text-xs"><%= user.created_at.strftime("%d/%m/%Y") %></td>
+          <td class="px-5 py-3 text-right">
+            <div class="flex items-center justify-end gap-3">
+              <%= link_to "Voir", admin_user_path(user),
+                    class: "text-xs lime hover:underline",
+                    onclick: "event.stopPropagation()" %>
+              <% if user.status == "active" %>
+                <%= button_to "Suspendre", suspend_admin_user_path(user), method: :post,
+                      class: "text-xs text-red-400 hover:underline bg-transparent border-0 cursor-pointer p-0",
+                      onclick: "event.stopPropagation()" %>
+              <% else %>
+                <%= button_to "Activer", activate_admin_user_path(user), method: :post,
+                      class: "text-xs lime hover:underline bg-transparent border-0 cursor-pointer p-0",
+                      onclick: "event.stopPropagation()" %>
+              <% end %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+      <% if @users.empty? %>
+        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-600">Aucun utilisateur</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%= render "shared/pagination", pagy: @pagy %>

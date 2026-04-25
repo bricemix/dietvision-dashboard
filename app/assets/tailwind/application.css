@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* ── DietVision Design Tokens ──────────────────────────── */
+:root {
+  --lime: #C8FF00;
+  --lime-dim: rgba(200,255,0,0.12);
+  --lime-text: #C8FF00;
+}
+
+/* ── Typography ─────────────────────────────────────────── */
+body { font-family: 'Inter', system-ui, sans-serif; }
+
+/* ── Lime accent ─────────────────────────────────────────── */
+.lime { color: #C8FF00; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn-primary {
+  background: #C8FF00;
+  color: #111111;
+  font-weight: 700;
+}
+.btn-primary:hover { background: #d8ff33; }
+
+/* ── Nav links ───────────────────────────────────────────── */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #9ca3af;
+  transition: all 0.15s;
+  cursor: pointer;
+  text-decoration: none;
+}
+.nav-link:hover { background: rgba(255,255,255,0.05); color: #f3f4f6; }
+.nav-link.active { background: var(--lime-dim); color: var(--lime-text); }
+
+/* ── Status badges ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.badge-free      { background: rgba(107,114,128,0.2);  color: #9ca3af; }
+.badge-premium   { background: rgba(200,255,0,0.15);   color: #C8FF00; }
+.badge-active    { background: rgba(200,255,0,0.12);   color: #C8FF00; }
+.badge-suspended { background: rgba(239,68,68,0.15);   color: #f87171; }
+.badge-success   { background: rgba(200,255,0,0.12);   color: #C8FF00; }
+.badge-pending   { background: rgba(234,179,8,0.15);   color: #facc15; }
+.badge-failed    { background: rgba(239,68,68,0.15);   color: #f87171; }
+.badge-error     { background: rgba(239,68,68,0.15);   color: #f87171; }
+.badge-expired   { background: rgba(107,114,128,0.2);  color: #9ca3af; }
+.badge-cancelled { background: rgba(107,114,128,0.2);  color: #9ca3af; }
+
+/* ── Input focus ─────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  border-color: #C8FF00 !important;
+  box-shadow: 0 0 0 1px #C8FF00;
+  outline: none;
+}
+
+/* ── Clickable rows ──────────────────────────────────────── */
+tr.clickable { cursor: pointer; }
+
+/* ── Pagination (Pagy) ───────────────────────────────────── */
+.pagy nav { display: flex; align-items: center; gap: 4px; }
+.pagy .page a,
+.pagy .prev a,
+.pagy .next a {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px; font-size: 12px;
+  background: #1f2937; color: #9ca3af;
+  border: 1px solid #374151;
+  text-decoration: none; transition: all 0.15s;
+}
+.pagy .page a:hover,
+.pagy .prev a:hover,
+.pagy .next a:hover { background: #374151; color: #f3f4f6; }
+.pagy .page.active a,
+.pagy .page.active span {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  background: #C8FF00; color: #111111; border: 1px solid #C8FF00;
+}
+.pagy .page.disabled span,
+.pagy .prev.disabled span,
+.pagy .next.disabled span {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px; font-size: 12px;
+  background: #111827; color: #4b5563; border: 1px solid #1f2937;
+}
+/* Bootstrap nav override */
+.pagination { display: flex; gap: 4px; list-style: none; padding: 0; margin: 0; }
+.pagination .page-item .page-link {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  border-radius: 6px; font-size: 12px;
+  background: #1f2937; color: #9ca3af; border: 1px solid #374151;
+  text-decoration: none; transition: all 0.15s;
+}
+.pagination .page-item .page-link:hover { background: #374151; color: #f3f4f6; }
+.pagination .page-item.active .page-link {
+  background: #C8FF00; color: #111; border-color: #C8FF00; font-weight: 700;
+}
+.pagination .page-item.disabled .page-link { background: #111827; color: #4b5563; border-color: #1f2937; }
+
+/* ── Scrollbar (dark) ────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }

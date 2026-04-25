@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DietVision Admin<%= content_for?(:title) ? " — #{yield :title}" : "" %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+</head>
+<body class="h-full bg-gray-950 text-gray-100 flex">
+
+  <%# ── Sidebar ──────────────────────────────────────────── %>
+  <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+
+    <%# Logo -%>
+    <div class="h-16 flex items-center px-5 border-b border-gray-800 gap-3">
+      <%# SVG logo DietVision %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 1024 1024" style="flex-shrink:0;border-radius:7px">
+        <rect width="1024" height="1024" rx="220" fill="#111111"/>
+        <path d="M160,160 L280,160 M160,160 L160,280" fill="none" stroke="#C8FF00" stroke-width="28" stroke-linecap="round"/>
+        <path d="M864,160 L744,160 M864,160 L864,280" fill="none" stroke="#C8FF00" stroke-width="28" stroke-linecap="round"/>
+        <path d="M160,864 L280,864 M160,864 L160,744" fill="none" stroke="#C8FF00" stroke-width="28" stroke-linecap="round"/>
+        <path d="M864,864 L744,864 M864,864 L864,744" fill="none" stroke="#C8FF00" stroke-width="28" stroke-linecap="round"/>
+        <line x1="160" y1="490" x2="864" y2="490" stroke="#C8FF00" stroke-width="8" stroke-opacity="0.18" stroke-dasharray="20,20"/>
+        <circle cx="512" cy="512" r="280" fill="none" stroke="#C8FF00" stroke-width="18"/>
+        <circle cx="512" cy="512" r="220" fill="#1a1a1a" stroke="#252525" stroke-width="6"/>
+        <line x1="460" y1="360" x2="460" y2="664" stroke="#C8FF00" stroke-width="22" stroke-linecap="round"/>
+        <line x1="428" y1="360" x2="428" y2="444" stroke="#C8FF00" stroke-width="16" stroke-linecap="round"/>
+        <line x1="492" y1="360" x2="492" y2="444" stroke="#C8FF00" stroke-width="16" stroke-linecap="round"/>
+        <path d="M428,444 Q460,480 492,444" fill="none" stroke="#C8FF00" stroke-width="16" stroke-linecap="round"/>
+        <line x1="564" y1="360" x2="564" y2="664" stroke="#C8FF00" stroke-width="22" stroke-linecap="round"/>
+        <path d="M564,360 Q618,430 564,500" fill="#1a1a1a" stroke="#C8FF00" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="512" cy="522" r="46" fill="#C8FF00"/>
+        <circle cx="512" cy="522" r="18" fill="#111111"/>
+      </svg>
+      <div>
+        <div style="font-size:15px;font-weight:700;letter-spacing:-0.3px;line-height:1">
+          <span style="color:#fff">Diet</span><span style="color:#C8FF00">Vision</span>
+        </div>
+        <div style="font-size:10px;color:#4b5563;letter-spacing:1px;margin-top:1px">ADMIN</div>
+      </div>
+    </div>
+
+    <%# Navigation -%>
+    <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+      <%= nav_link_icon admin_dashboard_path, "Dashboard" do %>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <% end %>
+      <%= nav_link_icon admin_users_path, "Utilisateurs" do %>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <% end %>
+      <%= nav_link_icon admin_payments_path, "Paiements" do %>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <% end %>
+      <%= nav_link_icon admin_api_usages_path, "Utilisation API" do %>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <% end %>
+      <%= nav_link_icon admin_configs_path, "Configuration" do %>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <% end %>
+    </nav>
+
+    <%# Footer -%>
+    <div class="px-4 py-4 border-t border-gray-800">
+      <div class="text-xs text-gray-500 mb-2"><%= current_admin&.name %></div>
+      <%= button_to "Déconnexion", admin_logout_path, method: :delete,
+            class: "text-sm text-gray-400 hover:text-red-400 transition-colors bg-transparent border-0 cursor-pointer p-0 text-left" %>
+    </div>
+  </aside>
+
+  <%# ── Main ─────────────────────────────────────────────── %>
+  <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <header class="h-16 bg-gray-900 border-b border-gray-800 flex items-center px-6 flex-shrink-0">
+      <h1 class="text-lg font-semibold text-gray-100"><%= content_for?(:title) ? yield(:title) : "Dashboard" %></h1>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6">
+      <% if flash[:notice] %>
+        <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium" style="background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);color:#C8FF00">
+          <%= flash[:notice] %>
+        </div>
+      <% end %>
+      <% if flash[:alert] %>
+        <div class="mb-4 px-4 py-3 bg-red-950 border border-red-800 rounded-lg text-red-400 text-sm">
+          <%= flash[:alert] %>
+        </div>
+      <% end %>
+
+      <%= yield %>
+    </main>
+  </div>
+
+</body>
+</html>

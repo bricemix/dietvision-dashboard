@@ -1,0 +1,83 @@
+<% content_for :title, "Dashboard" %>
+
+<%# ── 4 KPIs principaux ─────────────────────────────────── %>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <%= stat_card "Utilisateurs",        @total_users,              icon_users,    "text-blue-400" %>
+  <%= stat_card "Premium",             @premium_users,            icon_star,     "text-purple-400" %>
+  <%= stat_card "Revenus (mois)",      format_xof(@revenue_month),icon_money,    "lime" %>
+  <%= stat_card "Appels API auj.",     @api_calls_today,          icon_api,      "text-yellow-400" %>
+</div>
+
+<%# ── 3 stats secondaires ────────────────────────────────── %>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Revenus totaux</div>
+    <div class="text-2xl font-bold text-white"><%= format_xof(@total_revenue) %></div>
+    <div class="text-sm text-gray-500 mt-1"><%= @pending_payments %> paiements en attente</div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">API ce mois</div>
+    <div class="text-2xl font-bold text-white"><%= number_with_delimiter(@api_calls_month) %></div>
+    <div class="text-sm text-gray-500 mt-1">Coût: <%= format_usd(@api_cost_month) %></div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Nouveaux ce mois</div>
+    <div class="text-2xl font-bold text-white"><%= @new_users_month %></div>
+    <div class="text-sm text-gray-500 mt-1"><%= @free_users %> gratuit · <%= @premium_users %> premium</div>
+  </div>
+</div>
+
+<%# ── Tableaux ───────────────────────────────────────────── %>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+  <%# Derniers inscrits %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800">
+    <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-200">Derniers inscrits</h2>
+      <%= link_to "Voir tout →", admin_users_path, class: "text-xs lime hover:underline" %>
+    </div>
+    <div class="divide-y divide-gray-800">
+      <% @recent_users.each do |user| %>
+        <div class="px-5 py-3 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-gray-100"><%= user.name %></div>
+            <div class="text-xs text-gray-500"><%= user.email %></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <%= status_badge(user.plan) %>
+            <span class="text-xs text-gray-600"><%= time_ago_in_words(user.created_at) %></span>
+          </div>
+        </div>
+      <% end %>
+      <% if @recent_users.empty? %>
+        <div class="px-5 py-8 text-center text-sm text-gray-600">Aucun utilisateur</div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Derniers paiements %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800">
+    <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-200">Derniers paiements</h2>
+      <%= link_to "Voir tout →", admin_payments_path, class: "text-xs lime hover:underline" %>
+    </div>
+    <div class="divide-y divide-gray-800">
+      <% @recent_payments.each do |payment| %>
+        <div class="px-5 py-3 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-gray-100"><%= payment.user.name %></div>
+            <div class="text-xs text-gray-500"><%= payment.transaction_id %></div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-semibold lime"><%= format_xof(payment.amount) %></div>
+            <div class="text-xs text-gray-500"><%= payment.paid_at&.strftime("%d/%m %H:%M") %></div>
+          </div>
+        </div>
+      <% end %>
+      <% if @recent_payments.empty? %>
+        <div class="px-5 py-8 text-center text-sm text-gray-600">Aucun paiement</div>
+      <% end %>
+    </div>
+  </div>
+
+</div>
