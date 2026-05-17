@@ -1,20 +1,192 @@
 <% content_for :title, "Utilisateurs" %>
 
-<div class="mb-6 flex items-center justify-between gap-4">
-  <%= form_with url: admin_users_path, method: :get, class: "flex gap-3 flex-1" do |f| %>
-    <%= f.text_field :q, value: params[:q], placeholder: "Rechercher nom ou email…",
-          class: "flex-1 max-w-xs px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm
-                  text-white placeholder-gray-500" %>
-    <%= f.select :plan, [["Tous les plans", ""], ["Gratuit", "free"], ["Premium", "premium"]],
+<div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+  <%= form_with url: admin_users_path, method: :get, class: "flex gap-2 flex-1 flex-wrap" do |f| %>
+    <%= f.text_field :q, value: params[:q], placeholder: "Nom ou email…",
+          class: "flex-1 min-w-[160px] max-w-xs px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500" %>
+    <%= f.select :plan,
+          [["Tous plans", ""], ["Gratuit", "free"], ["Premium", "premium"]],
           { selected: params[:plan] },
           class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
-    <%= f.select :status, [["Tous statuts", ""], ["Actif", "active"], ["Suspendu", "suspended"]],
+    <%= f.select :status,
+          [["Tous statuts", ""], ["Actif", "active"], ["Suspendu", "suspended"]],
           { selected: params[:status] },
           class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    <label class="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer">
+      <input type="checkbox" name="trial" value="1" <%= params[:trial] == "1" ? "checked" : "" %>
+             class="accent-lime-400">
+      <span class="text-sm text-gray-300">En essai</span>
+    </label>
     <%= f.submit "Filtrer",
           class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
   <% end %>
-  <div class="text-sm text-gray-500"><%= @pagy.count %> utilisateurs</div>
+
+  <div class="flex items-center gap-3 flex-shrink-0">
+    <div class="text-sm text-gray-500"><%= @pagy.count %> utilisateurs</div>
+    <button type="button" onclick="openCreatePanel()"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+            style="background:#C8FF00;color:#0f172a">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Créer un utilisateur
+    </button>
+  </div>
+</div>
+
+<%# ── Slide-over panel création utilisateur ── %>
+<div id="create-overlay" onclick="if(event.target===this)closeCreatePanel()"
+     class="fixed inset-0 z-50 hidden"
+     style="background:rgba(0,0,0,0.6);backdrop-filter:blur(3px)">
+  <div id="create-panel"
+       class="absolute right-0 top-0 h-full w-full max-w-lg bg-gray-950 border-l border-gray-800 overflow-y-auto"
+       style="transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+      <div>
+        <h2 class="text-base font-bold text-white">Créer un utilisateur</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Compte créé manuellement par l'admin</p>
+      </div>
+      <button onclick="closeCreatePanel()" class="text-gray-500 hover:text-white text-2xl leading-none">&times;</button>
+    </div>
+
+    <%= form_with url: admin_users_path, method: :post, class: "px-6 py-5 space-y-5" do |f| %>
+
+      <% if flash[:alert].present? %>
+        <div class="p-3 bg-red-950 border border-red-800 rounded-lg text-red-400 text-sm"><%= flash[:alert] %></div>
+      <% end %>
+
+      <%# Section 1 — Identité %>
+      <div>
+        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">👤 Identité</div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Nom complet <span class="text-red-400">*</span></label>
+            <input type="text" name="user[name]" required placeholder="Jean Dupont"
+                   class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C8FF00] focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Email <span class="text-red-400">*</span></label>
+            <input type="email" name="user[email]" required placeholder="jean@example.com"
+                   class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C8FF00] focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Pays</label>
+              <input type="text" name="user[country]" placeholder="FR"
+                     class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C8FF00] focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Statut</label>
+              <select name="user[status]" class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-[#C8FF00] focus:outline-none">
+                <option value="active">✓ Actif</option>
+                <option value="suspended">✗ Suspendu</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">
+              Mot de passe temporaire
+              <span class="text-gray-600 font-normal">(laissez vide = généré automatiquement)</span>
+            </label>
+            <input type="text" name="user[password]" placeholder="Laissez vide pour auto-générer"
+                   autocomplete="new-password"
+                   class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:border-[#C8FF00] focus:outline-none">
+            <p class="text-xs text-gray-600 mt-1">Le mot de passe sera affiché après création.</p>
+          </div>
+        </div>
+      </div>
+
+      <%# Section 2 — Plan %>
+      <div class="border-t border-gray-800 pt-5">
+        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">💳 Plan & Accès</div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-2">Plan attribué</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                     onclick="handlePlanChange('free')">
+                <input type="radio" name="user[plan]" value="free" checked class="accent-[#C8FF00]" id="plan-free">
+                <div>
+                  <div class="text-sm font-semibold text-white">Gratuit</div>
+                  <div class="text-xs text-gray-500">Accès limité</div>
+                </div>
+              </label>
+              <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                     onclick="handlePlanChange('premium')">
+                <input type="radio" name="user[plan]" value="premium" class="accent-[#C8FF00]" id="plan-premium">
+                <div>
+                  <div class="text-sm font-semibold text-white">Premium</div>
+                  <div class="text-xs text-gray-500">Accès complet</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <%# Durée abonnement premium (affiché si premium sélectionné) %>
+          <div id="premium-options" class="hidden">
+            <label class="block text-xs text-gray-400 mb-1">Durée de l'abonnement premium</label>
+            <div class="flex gap-2 flex-wrap mb-2">
+              <% [[30,"30 jours"],[90,"3 mois"],[180,"6 mois"],[365,"1 an"]].each do |days, label| %>
+                <button type="button"
+                        onclick="setDays(<%= days %>)"
+                        class="days-preset px-3 py-1.5 bg-gray-700 hover:bg-[#C8FF00] hover:text-black text-gray-300 text-xs rounded-md transition-colors font-medium">
+                  <%= label %>
+                </button>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" name="user[subscription_days]" id="subscription-days"
+                     value="30" min="1" max="3650"
+                     class="w-24 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-[#C8FF00] focus:outline-none">
+              <span class="text-xs text-gray-500">jours à partir d'aujourd'hui</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# Section 3 — Essai %>
+      <div class="border-t border-gray-800 pt-5">
+        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">⏱ Période d'essai</div>
+        <label class="flex items-center gap-3 cursor-pointer mb-3" onclick="toggleTrial()">
+          <input type="checkbox" name="user[start_trial]" value="1" id="trial-checkbox"
+                 class="w-4 h-4 rounded accent-[#C8FF00]">
+          <span class="text-sm text-gray-300">Activer une période d'essai</span>
+        </label>
+        <div id="trial-options" class="hidden">
+          <label class="block text-xs text-gray-400 mb-1">Durée de l'essai</label>
+          <div class="flex gap-2 flex-wrap mb-2">
+            <% [[7,"7 jours"],[14,"14 jours"],[30,"30 jours"]].each do |days, label| %>
+              <button type="button"
+                      onclick="setTrialDays(<%= days %>)"
+                      class="trial-preset px-3 py-1.5 bg-gray-700 hover:bg-purple-700 text-gray-300 text-xs rounded-md transition-colors">
+                <%= label %>
+              </button>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="number" name="user[trial_days]" id="trial-days"
+                   value="7" min="1" max="90"
+                   class="w-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-purple-400 focus:outline-none">
+            <span class="text-xs text-gray-500">jours d'essai gratuit</span>
+          </div>
+        </div>
+      </div>
+
+      <%# Actions %>
+      <div class="border-t border-gray-800 pt-5 flex gap-3">
+        <button type="submit"
+                class="flex-1 py-3 rounded-lg text-sm font-bold transition-colors"
+                style="background:#C8FF00;color:#0f172a">
+          ✓ Créer l'utilisateur
+        </button>
+        <button type="button" onclick="closeCreatePanel()"
+                class="px-5 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors">
+          Annuler
+        </button>
+      </div>
+
+    <% end %>
+  </div>
 </div>
 
 <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
@@ -24,6 +196,7 @@
         <th class="text-left px-5 py-3 font-medium">Utilisateur</th>
         <th class="text-left px-4 py-3 font-medium">Pays</th>
         <th class="text-left px-4 py-3 font-medium">Plan</th>
+        <th class="text-left px-4 py-3 font-medium">Essai</th>
         <th class="text-left px-4 py-3 font-medium">Statut</th>
         <th class="text-left px-4 py-3 font-medium">Inscription</th>
         <th class="text-right px-5 py-3 font-medium">Actions</th>
@@ -39,6 +212,17 @@
           </td>
           <td class="px-4 py-3 text-gray-400"><%= user.country %></td>
           <td class="px-4 py-3"><%= status_badge(user.plan) %></td>
+          <td class="px-4 py-3">
+            <% if user.in_trial? %>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">
+                J-<%= user.trial_days_remaining %>
+              </span>
+            <% elsif user.had_trial? %>
+              <span class="text-xs text-gray-600">Terminé</span>
+            <% else %>
+              <span class="text-xs text-gray-700">—</span>
+            <% end %>
+          </td>
           <td class="px-4 py-3"><%= status_badge(user.status) %></td>
           <td class="px-4 py-3 text-gray-400 text-xs"><%= user.created_at.strftime("%d/%m/%Y") %></td>
           <td class="px-5 py-3 text-right">
@@ -60,10 +244,92 @@
         </tr>
       <% end %>
       <% if @users.empty? %>
-        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-600">Aucun utilisateur</td></tr>
+        <tr><td colspan="7" class="px-5 py-10 text-center text-gray-600">Aucun utilisateur</td></tr>
       <% end %>
     </tbody>
   </table>
 </div>
-
 <%= render "shared/pagination", pagy: @pagy %>
+
+<script>
+  // ── Slide-over panel ──────────────────────────────────────────
+  function openCreatePanel() {
+    const overlay = document.getElementById('create-overlay');
+    const panel   = document.getElementById('create-panel');
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panel.style.transform = 'translateX(0)';
+      });
+    });
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCreatePanel() {
+    const overlay = document.getElementById('create-overlay');
+    const panel   = document.getElementById('create-panel');
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }, 300);
+  }
+
+  // ── Plan selection ────────────────────────────────────────────
+  function handlePlanChange(plan) {
+    const premiumOpts = document.getElementById('premium-options');
+    if (plan === 'premium') {
+      premiumOpts.classList.remove('hidden');
+    } else {
+      premiumOpts.classList.add('hidden');
+    }
+    // Update radio button visual borders
+    document.querySelectorAll('.plan-radio-label').forEach(label => {
+      label.style.borderColor = '';
+    });
+    const selected = document.getElementById('plan-' + plan);
+    if (selected) {
+      selected.closest('.plan-radio-label').style.borderColor = '#C8FF00';
+    }
+  }
+
+  // ── Premium duration presets ──────────────────────────────────
+  function setDays(days) {
+    document.getElementById('subscription-days').value = days;
+    document.querySelectorAll('.days-preset').forEach(btn => {
+      btn.classList.remove('bg-[#C8FF00]', 'text-black');
+      btn.classList.add('bg-gray-700', 'text-gray-300');
+    });
+    event.target.classList.remove('bg-gray-700', 'text-gray-300');
+    event.target.classList.add('bg-[#C8FF00]', 'text-black');
+  }
+
+  // ── Trial toggle & presets ────────────────────────────────────
+  function toggleTrial() {
+    const cb   = document.getElementById('trial-checkbox');
+    const opts = document.getElementById('trial-options');
+    // The checkbox state flips AFTER onclick on the label, so read after tick
+    setTimeout(() => {
+      if (cb.checked) {
+        opts.classList.remove('hidden');
+      } else {
+        opts.classList.add('hidden');
+      }
+    }, 0);
+  }
+
+  function setTrialDays(days) {
+    document.getElementById('trial-days').value = days;
+    document.querySelectorAll('.trial-preset').forEach(btn => {
+      btn.classList.remove('bg-purple-700', 'text-white');
+      btn.classList.add('bg-gray-700', 'text-gray-300');
+    });
+    event.target.classList.remove('bg-gray-700', 'text-gray-300');
+    event.target.classList.add('bg-purple-700', 'text-white');
+  }
+
+  // ── Keyboard: Escape closes panel ────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCreatePanel();
+  });
+</script>

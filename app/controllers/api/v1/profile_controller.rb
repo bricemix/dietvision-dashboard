@@ -1,3 +1,5 @@
+require 'json'
+
 module Api
   module V1
     class ProfileController < BaseController
@@ -28,6 +30,52 @@ module Api
         }
       end
 
+      # ── FitAI nutrition profile ──────────────────────────────────────────────
+
+      # GET /api/v1/user/fitai
+      def fitai_show
+        data = parse_json(current_user.fitai_profile)
+        render json: { fitai_profile: data }
+      end
+
+      # PUT /api/v1/user/fitai  (also aliased as PUT /api/v1/user/profile)
+      def fitai_update
+        payload = request.request_parameters
+        # Accept both top-level keys and nested fitai_profile key
+        profile_data = payload['fitai_profile'] || payload
+        profile_data = profile_data.to_unsafe_h if profile_data.respond_to?(:to_unsafe_h)
+
+        if current_user.update(fitai_profile: profile_data.to_json)
+          render json: { ok: true, fitai_profile: profile_data }
+        else
+          render json: { error: current_user.errors.full_messages.join(", ") },
+                 status: :unprocessable_entity
+        end
+      end
+
+      # ── Weekly planning ──────────────────────────────────────────────────────
+
+      # GET /api/v1/user/planning
+      def planning_show
+        data = parse_json(current_user.planning_data)
+        render json: { planning: data }
+      end
+
+      # PUT /api/v1/user/planning
+      def planning_update
+        payload = request.request_parameters
+        plans_data = payload['planning'] || payload['days'] || payload
+        plans_data = plans_data.to_unsafe_h if plans_data.respond_to?(:to_unsafe_h)
+        plans_json = plans_data.is_a?(Array) ? plans_data.to_json : plans_data.to_json
+
+        if current_user.update(planning_data: plans_json)
+          render json: { ok: true }
+        else
+          render json: { error: current_user.errors.full_messages.join(", ") },
+                 status: :unprocessable_entity
+        end
+      end
+
       private
 
       def profile_params
@@ -47,6 +95,13 @@ module Api
           api_calls_today:         ApiUsage.where(user: current_user).today.count,
           daily_limit:             current_user.premium? ? AppConfig.premium_daily_limit : AppConfig.free_daily_limit
         }
+      end
+
+      def parse_json(raw)
+        return nil if raw.blank?
+        JSON.parse(raw)
+      rescue JSON::ParserError
+        nil
       end
     end
   end
