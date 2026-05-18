@@ -2,7 +2,8 @@ source "https://rubygems.org"
 
 gem "rails", "~> 8.0.4"
 gem "propshaft"
-gem "sqlite3", ">= 2.1"
+gem "sqlite3", ">= 2.1"  # dev/test + SolidCache/Queue/Cable en prod
+gem "pg", "~> 1.5"       # production primary database
 gem "puma", ">= 5.0"
 gem "importmap-rails"
 gem "turbo-rails"
