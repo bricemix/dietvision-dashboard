@@ -1,7 +1,8 @@
 module Api
   module V1
     class AuthController < BaseController
-      skip_authentication :register, :login
+      skip_authentication :register, :login, :send_verification, :verify_email,
+                          :forgot_password, :reset_password
 
       # POST /api/v1/auth/register
       def register
@@ -11,11 +12,41 @@ module Api
           if AppConfig.trial_enabled? && AppConfig.trial_period_days > 0 && !user.had_trial
             user.start_trial!(AppConfig.trial_period_days)
           end
-          UserMailer.welcome(user).deliver_now
+          # Envoyer le code de vérification e-mail automatiquement
+          code = user.generate_verification_code!
+          UserMailer.verification_code(user, code).deliver_later
+          UserMailer.welcome(user).deliver_later
           token = issue_token(user)
           render json: { token: token, user: user_json(user) }, status: :created
         else
           render json: { error: user.errors.full_messages.join(", ") }, status: :unprocessable_entity
+        end
+      end
+
+      # POST /api/v1/auth/send_verification
+      # Body: { "email": "user@example.com" }
+      def send_verification
+        user = User.find_by(email: params[:email]&.downcase)
+        return render json: { error: "Utilisateur introuvable" }, status: :not_found unless user
+        return render json: { error: "Email déjà vérifié" }, status: :unprocessable_entity if user.email_verified?
+        if user.verification_code_cooldown?
+          return render json: { error: "Veuillez patienter avant de renvoyer le code", wait: true }, status: :too_many_requests
+        end
+        code = user.generate_verification_code!
+        UserMailer.verification_code(user, code).deliver_later
+        render json: { message: "Code envoyé à #{user.email}" }, status: :ok
+      end
+
+      # POST /api/v1/auth/verify_email
+      # Body: { "email": "user@example.com", "code": "123456" }
+      def verify_email
+        user = User.find_by(email: params[:email]&.downcase)
+        return render json: { error: "Utilisateur introuvable" }, status: :not_found unless user
+        return render json: { verified: true, message: "Déjà vérifié" } if user.email_verified?
+        if user.verify_email!(params[:code])
+          render json: { verified: true, user: user_json(user) }, status: :ok
+        else
+          render json: { verified: false, error: "Code incorrect ou expiré" }, status: :unprocessable_entity
         end
       end
 
@@ -33,6 +64,38 @@ module Api
 
         token = issue_token(user)
         render json: { token: token, user: user_json(user) }
+      end
+
+      # POST /api/v1/auth/forgot_password
+      # Body: { "email": "user@example.com" }
+      # Envoie un code de réinitialisation à 6 chiffres valable 1h.
+      # Répond toujours 200 (même si l'email est inconnu) pour éviter l'énumération.
+      def forgot_password
+        user = User.find_by(email: params[:email]&.downcase)
+        if user
+          if user.password_reset_cooldown?
+            return render json: {
+              error: "Veuillez patienter avant de demander un nouveau code", wait: true
+            }, status: :too_many_requests
+          end
+          token = user.generate_password_reset_token!
+          UserMailer.password_reset(user, token).deliver_later
+        end
+        render json: { message: "Si cet email existe, un code de réinitialisation a été envoyé." }, status: :ok
+      end
+
+      # POST /api/v1/auth/reset_password
+      # Body: { "email": "user@example.com", "token": "123456", "password": "NewPass1!" }
+      def reset_password
+        user = User.find_by(email: params[:email]&.downcase)
+        unless user
+          return render json: { error: "Utilisateur introuvable" }, status: :not_found
+        end
+        if user.reset_password_with_token!(params[:token], params[:password])
+          render json: { message: "Mot de passe réinitialisé avec succès" }, status: :ok
+        else
+          render json: { error: "Code invalide, expiré, ou mot de passe non conforme" }, status: :unprocessable_entity
+        end
       end
 
       # DELETE /api/v1/auth/logout
@@ -82,7 +145,8 @@ module Api
           premium:                 user.premium?,
           trial_ends_at:           user.trial_ends_at,
           in_trial:                user.in_trial?,
-          trial_days_remaining:    user.trial_days_remaining
+          trial_days_remaining:    user.trial_days_remaining,
+          email_verified:          user.email_verified?
         }
       end
     end

@@ -17,6 +17,26 @@ class UserMailer < ApplicationMailer
     )
   end
 
+  # Code de vérification d'adresse e-mail
+  def verification_code(user, code)
+    @user = user
+    @code = code
+    mail(
+      to:      "#{user.name} <#{user.email}>",
+      subject: "#{code} — Votre code de vérification DietVision"
+    )
+  end
+
+  # Code de réinitialisation de mot de passe
+  def password_reset(user, token)
+    @user  = user
+    @token = token
+    mail(
+      to:      "#{user.name} <#{user.email}>",
+      subject: "#{token} — Réinitialisez votre mot de passe DietVision"
+    )
+  end
+
   # Confirmation d'activation Premium — envoyé par invoice.paid (optionnel)
   def subscription_activated(user, expires_at)
     @user       = user

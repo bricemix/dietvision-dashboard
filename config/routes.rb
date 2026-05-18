@@ -6,11 +6,15 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Auth
-      post   "auth/register",  to: "auth#register"
-      post   "auth/login",     to: "auth#login"
-      delete "auth/logout",    to: "auth#logout"
-      get    "auth/me",        to: "auth#me"
-      post   "auth/refresh",   to: "auth#refresh"
+      post   "auth/register",          to: "auth#register"
+      post   "auth/login",             to: "auth#login"
+      delete "auth/logout",            to: "auth#logout"
+      get    "auth/me",                to: "auth#me"
+      post   "auth/refresh",           to: "auth#refresh"
+      post   "auth/send_verification", to: "auth#send_verification"
+      post   "auth/verify_email",      to: "auth#verify_email"
+      post   "auth/forgot_password",   to: "auth#forgot_password"
+      post   "auth/reset_password",    to: "auth#reset_password"
 
       # IA
       post   "ai/analyze",     to: "ai#analyze"
@@ -18,6 +22,9 @@ Rails.application.routes.draw do
 
       # Plans (public)
       get    "plans",          to: "plans#index"
+
+      # Config publique (trial days, etc.)
+      get    "config",             to: "config#show"
 
       # Documents légaux (public — pas d'auth)
       get    "legal/rgpd",    to: "legal#rgpd"
