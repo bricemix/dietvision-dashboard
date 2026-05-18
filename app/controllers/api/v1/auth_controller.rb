@@ -13,9 +13,9 @@ module Api
             user.start_trial!(AppConfig.trial_period_days)
           end
           # Envoyer le code de vérification e-mail automatiquement
+          # Le mail de bienvenue est envoyé APRÈS validation du code (voir verify_email)
           code = user.generate_verification_code!
           UserMailer.verification_code(user, code).deliver_later
-          UserMailer.welcome(user).deliver_later
           token = issue_token(user)
           render json: { token: token, user: user_json(user) }, status: :created
         else
@@ -44,6 +44,8 @@ module Api
         return render json: { error: "Utilisateur introuvable" }, status: :not_found unless user
         return render json: { verified: true, message: "Déjà vérifié" } if user.email_verified?
         if user.verify_email!(params[:code])
+          # Email validé → envoyer le mail de bienvenue maintenant
+          UserMailer.welcome(user).deliver_later
           render json: { verified: true, user: user_json(user) }, status: :ok
         else
           render json: { verified: false, error: "Code incorrect ou expiré" }, status: :unprocessable_entity
