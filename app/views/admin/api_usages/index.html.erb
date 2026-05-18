@@ -44,7 +44,28 @@
           <td class="px-4 py-2.5 text-gray-400 text-xs"><%= u.input_tokens %> / <%= u.output_tokens %></td>
           <td class="px-4 py-2.5 text-gray-400 text-xs"><%= format_usd(u.cost_usd) %></td>
           <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.duration_ms %>ms</td>
-          <td class="px-4 py-2.5"><%= status_badge(u.status) %></td>
+          <td class="px-4 py-2.5">
+            <div class="flex items-center gap-2">
+              <%= status_badge(u.status) %>
+              <% if u.status == "error" %>
+                <button
+                  type="button"
+                  onclick="showErrorModal(this)"
+                  data-endpoint="<%= u.endpoint %>"
+                  data-date="<%= u.created_at.strftime("%d/%m/%Y %H:%M:%S") %>"
+                  data-model="<%= u.model %>"
+                  data-duration="<%= u.duration_ms %>"
+                  data-error="<%= h(u.error_message.presence || 'Aucun détail enregistré') %>"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-950/60 text-red-400 border border-red-900/50 hover:bg-red-900/60 hover:text-red-300 transition-colors cursor-pointer"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Voir
+                </button>
+              <% end %>
+            </div>
+          </td>
           <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.created_at.strftime("%d/%m %H:%M") %></td>
         </tr>
       <% end %>
@@ -58,3 +79,86 @@
 </div>
 
 <%= render "shared/pagination", pagy: @pagy %>
+
+<%# ── Modal erreur ──────────────────────────────────────────────────────────── %>
+<div id="error-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <%# Overlay %>
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeErrorModal()"></div>
+
+  <%# Panneau %>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
+    <div class="bg-gray-900 border border-red-900/60 rounded-2xl shadow-2xl overflow-hidden">
+
+      <%# Header %>
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+        <div class="flex items-center gap-2.5">
+          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-red-950/80 border border-red-900/50">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </span>
+          <span class="text-white font-semibold text-sm">Détail de l'erreur API</span>
+        </div>
+        <button type="button" onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-800">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <%# Métadonnées %>
+      <div class="px-5 py-3 bg-gray-800/40 border-b border-gray-800 grid grid-cols-3 gap-3 text-xs">
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Endpoint</p>
+          <p id="modal-endpoint" class="text-gray-200 font-mono font-medium"></p>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Modèle</p>
+          <p id="modal-model" class="text-gray-400 truncate"></p>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Date</p>
+          <p id="modal-date" class="text-gray-400"></p>
+        </div>
+      </div>
+
+      <%# Message d'erreur %>
+      <div class="px-5 py-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-2" style="font-size:10px">Message d'erreur</p>
+        <div class="bg-gray-950 border border-red-900/40 rounded-xl p-4">
+          <pre id="modal-error" class="text-red-300 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed"></pre>
+        </div>
+      </div>
+
+      <%# Footer %>
+      <div class="px-5 pb-4 flex justify-between items-center">
+        <span id="modal-duration" class="text-xs text-gray-600"></span>
+        <button type="button" onclick="closeErrorModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors font-medium">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function showErrorModal(btn) {
+    document.getElementById('modal-endpoint').textContent = btn.dataset.endpoint;
+    document.getElementById('modal-model').textContent    = btn.dataset.model;
+    document.getElementById('modal-date').textContent     = btn.dataset.date;
+    document.getElementById('modal-error').textContent    = btn.dataset.error;
+    document.getElementById('modal-duration').textContent = btn.dataset.duration + ' ms';
+    document.getElementById('error-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeErrorModal() {
+    document.getElementById('error-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeErrorModal();
+  });
+</script>

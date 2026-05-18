@@ -1,33 +1,85 @@
 <% content_for :title, "Dashboard" %>
 
-<%# ── 4 KPIs principaux ─────────────────────────────────── %>
+<%# ── 6 KPIs principaux ──────────────────────────────────── %>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+  <%= stat_card "Total utilisateurs",   @total_users,                icon_users,    "text-blue-400" %>
+  <%= stat_card "En essai",             @trial_users,                icon_clock,    "text-purple-400" %>
+  <%= stat_card "Revenus (mois)",       format_ariary(@revenue_month), icon_money,  "lime" %>
+  <%= stat_card "Conversion essai",     "#{@conversion_rate}%",      icon_convert,  "lime" %>
+</div>
+
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <%= stat_card "Utilisateurs",        @total_users,              icon_users,    "text-blue-400" %>
-  <%= stat_card "Premium",             @premium_users,            icon_star,     "text-purple-400" %>
-  <%= stat_card "Revenus (mois)",      format_xof(@revenue_month),icon_money,    "lime" %>
-  <%= stat_card "Appels API auj.",     @api_calls_today,          icon_api,      "text-yellow-400" %>
+  <%= stat_card "Actifs aujourd'hui",   @active_today,               icon_trend_up, "text-green-400" %>
+  <%= stat_card "Actifs ce mois",       @active_month,               icon_trend_up, "text-yellow-400" %>
+  <%= stat_card "Nouveaux (mois)",      @new_users_month,            icon_users,    "text-blue-400" %>
+  <%= stat_card "Appels API auj.",      @api_calls_today,            icon_api,      "text-yellow-400" %>
 </div>
 
-<%# ── 3 stats secondaires ────────────────────────────────── %>
+<%# ── Graphique 30 jours ──────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold text-gray-200">Inscriptions — 30 derniers jours</h2>
+    <span class="text-xs text-gray-500"><%= @new_users_month %> ce mois</span>
+  </div>
+  <canvas id="signupsChart" height="80"></canvas>
+</div>
+
+<%# ── Revenus + Conversion ───────────────────────────────── %>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+
+  <%# Revenus par opérateur %>
   <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Revenus totaux</div>
-    <div class="text-2xl font-bold text-white"><%= format_xof(@total_revenue) %></div>
-    <div class="text-sm text-gray-500 mt-1"><%= @pending_payments %> paiements en attente</div>
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Revenus par opérateur (mois)</div>
+    <% if @revenue_by_operator.empty? %>
+      <div class="text-sm text-gray-600 py-4 text-center">Aucun paiement ce mois</div>
+    <% else %>
+      <% @revenue_by_operator.sort_by { |_, v| -v }.each do |provider, amount| %>
+        <div class="flex items-center justify-between mb-2">
+          <%= operator_badge(provider) %>
+          <span class="text-sm font-semibold text-white"><%= format_ariary(amount) %></span>
+        </div>
+      <% end %>
+    <% end %>
+    <div class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-xs">
+      <span class="text-gray-500">Total mois</span>
+      <span class="font-bold lime"><%= format_ariary(@revenue_month) %></span>
+    </div>
   </div>
+
+  <%# Taux de conversion %>
   <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">API ce mois</div>
-    <div class="text-2xl font-bold text-white"><%= number_with_delimiter(@api_calls_month) %></div>
-    <div class="text-sm text-gray-500 mt-1">Coût: <%= format_usd(@api_cost_month) %></div>
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">Conversion essai → payant</div>
+    <div class="text-3xl font-bold lime mb-1"><%= @conversion_rate %>%</div>
+    <div class="text-sm text-gray-500"><%= @converted %> convertis / <%= @total_had_trial %> essais</div>
+    <div class="mt-4 bg-gray-800 rounded-full h-2">
+      <div class="rounded-full h-2" style="width:<%= [@conversion_rate, 100].min %>%;background:#C8FF00"></div>
+    </div>
+    <div class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-xs text-gray-500">
+      <span>En essai actuellement</span>
+      <span class="text-purple-400 font-semibold"><%= @trial_users %></span>
+    </div>
   </div>
+
+  <%# API -%>
   <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Nouveaux ce mois</div>
-    <div class="text-2xl font-bold text-white"><%= @new_users_month %></div>
-    <div class="text-sm text-gray-500 mt-1"><%= @free_users %> gratuit · <%= @premium_users %> premium</div>
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-3">API OpenRouter (mois)</div>
+    <div class="text-2xl font-bold text-white mb-1"><%= number_with_delimiter(@api_calls_month) %></div>
+    <div class="text-sm text-gray-500">appels · coût <%= format_usd(@api_cost_month) %></div>
+    <div class="mt-3 pt-3 border-t border-gray-800">
+      <div class="flex justify-between text-xs text-gray-500 mb-1">
+        <span>Free</span><span class="text-white"><%= @free_users %></span>
+      </div>
+      <div class="flex justify-between text-xs text-gray-500 mb-1">
+        <span>Premium</span><span class="text-white"><%= @premium_users %></span>
+      </div>
+      <div class="flex justify-between text-xs text-gray-500">
+        <span>En attente paiement</span><span class="text-yellow-400"><%= @pending_payments %></span>
+      </div>
+    </div>
   </div>
 </div>
 
-<%# ── Tableaux ───────────────────────────────────────────── %>
+<%# ── Tableaux récents ───────────────────────────────────── %>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
   <%# Derniers inscrits %>
@@ -66,10 +118,10 @@
         <div class="px-5 py-3 flex items-center justify-between">
           <div>
             <div class="text-sm font-medium text-gray-100"><%= payment.user.name %></div>
-            <div class="text-xs text-gray-500"><%= payment.transaction_id %></div>
+            <%= operator_badge(payment.provider) %>
           </div>
           <div class="text-right">
-            <div class="text-sm font-semibold lime"><%= format_xof(payment.amount) %></div>
+            <div class="text-sm font-semibold lime"><%= format_ariary(payment.amount) %></div>
             <div class="text-xs text-gray-500"><%= payment.paid_at&.strftime("%d/%m %H:%M") %></div>
           </div>
         </div>
@@ -79,5 +131,49 @@
       <% end %>
     </div>
   </div>
-
 </div>
+
+<%# ── Chart.js ──────────────────────────────────────────── %>
+<% content_for :scripts do %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const ctx = document.getElementById('signupsChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: <%= @chart_labels %>,
+        datasets: [{
+          label: 'Inscriptions',
+          data: <%= @chart_values %>,
+          backgroundColor: 'rgba(200, 255, 0, 0.25)',
+          borderColor: '#C8FF00',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1f2937',
+            titleColor: '#9ca3af',
+            bodyColor: '#fff',
+            borderColor: '#374151',
+            borderWidth: 1,
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#6b7280', font: { size: 10 }, stepSize: 1 },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+</script>
+<% end %>

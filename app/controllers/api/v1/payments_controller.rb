@@ -3,51 +3,55 @@ module Api
     class PaymentsController < BaseController
       skip_authentication :webhook
 
-      # POST /api/v1/payments/initiate
-      # Body: { plan: "monthly"|"yearly", phone: "...", name: "..." }
-      def initiate
-        plan_key = params[:plan]
-        plan_cfg = Subscription::PLANS[plan_key]
-        return render json: { error: "Plan invalide" }, status: :bad_request unless plan_cfg
+      # POST /api/v1/payments/subscribe
+      # Body: { plan_id: 3 }
+      # Retourne une checkout_url Stripe à ouvrir dans le navigateur
+      def subscribe
+        plan = Plan.active.find_by(id: params[:plan_id])
+        return render json: { error: "Plan introuvable ou inactif" }, status: :not_found unless plan
 
-        # Créer la subscription en attente
+        unless plan.stripe_configured?
+          return render json: { error: "Ce plan n'est pas encore disponible au paiement" },
+                        status: :unprocessable_entity
+        end
+
+        service = StripeService.new
+        result  = service.create_checkout_session(user: current_user, plan: plan)
+
+        # Créer subscription + payment en attente
+        amount_cents = plan.price_eur_cents
         subscription = current_user.subscriptions.create!(
-          plan:   plan_key,
-          amount: plan_cfg[:price],
+          plan:   plan.slug,
+          amount: amount_cents,
           status: "pending"
         )
 
-        # Créer le paiement
-        payment = current_user.payments.create!(
+        current_user.payments.create!(
           subscription: subscription,
-          amount:       plan_cfg[:price],
-          currency:     "XOF",
-          provider:     "cinetpay",
-          phone_number: params[:phone],
-          status:       "pending"
+          amount:       amount_cents,
+          currency:    "EUR",
+          provider:    "stripe",
+          status:      "pending",
+          provider_ref: result[:session_id]
         )
 
-        # Appel CinetPay
-        service = CinetpayService.new
-        result  = service.initiate_payment(
-          amount:         plan_cfg[:price],
-          transaction_id: payment.transaction_id,
-          description:    "DietVision #{plan_cfg[:label]}",
-          phone:          params[:phone],
-          name:           params[:name] || current_user.name,
-          notify_url:     api_v1_payments_webhook_url,
-          return_url:     "dietvision://payment/callback"
-        )
+        render json: {
+          checkout_url: result[:checkout_url],
+          session_id:   result[:session_id],
+          plan: {
+            id:       plan.id,
+            name:     plan.name,
+            amount:   amount_cents,
+            currency: "EUR"
+          }
+        }, status: :created
 
-        if result[:error]
-          payment.mark_failed!(response: result)
-          render json: { error: result[:error] }, status: :unprocessable_entity
-        else
-          render json: {
-            payment_url:    result[:payment_url],
-            transaction_id: payment.transaction_id
-          }, status: :created
-        end
+      rescue Stripe::StripeError => e
+        Rails.logger.error("Stripe subscribe error: #{e.message}")
+        render json: { error: e.message }, status: :unprocessable_entity
+      rescue => e
+        Rails.logger.error("Subscribe error: #{e.message}")
+        render json: { error: "Erreur serveur" }, status: :internal_server_error
       end
 
       # GET /api/v1/payments/status/:transaction_id
@@ -57,35 +61,28 @@ module Api
           status:         payment.status,
           transaction_id: payment.transaction_id,
           amount:         payment.amount,
+          currency:       payment.currency,
           paid_at:        payment.paid_at
         }
       end
 
-      # POST /api/v1/payments/webhook  (CinetPay notify_url — public)
+      # POST /api/v1/payments/webhook  (Stripe → public)
       def webhook
-        transaction_id = params[:cpm_trans_id] || params[:transaction_id]
-        payment        = Payment.find_by(transaction_id: transaction_id)
+        payload   = request.raw_post
+        signature = request.env["HTTP_STRIPE_SIGNATURE"]
+        return head :bad_request if signature.blank?
 
-        return head :not_found unless payment
-        return head :ok if payment.status == "success" # idempotent
-
-        service = CinetpayService.new
-        result  = service.check_payment(transaction_id)
-
-        case result[:status]
-        when "success"
-          payment.mark_success!(
-            provider_ref: result[:provider_ref],
-            response:     result[:raw]
-          )
-        when "failed"
-          payment.mark_failed!(response: result[:raw])
-        end
-
+        service = StripeService.new
+        event   = service.construct_event(payload, signature)
+        service.handle_event(event)
         head :ok
+
+      rescue Stripe::SignatureVerificationError => e
+        Rails.logger.warn("Stripe webhook signature error: #{e.message}")
+        head :unauthorized
       rescue => e
-        Rails.logger.error("CinetPay webhook error: #{e.message}")
-        head :ok # toujours 200 pour éviter les retentatives
+        Rails.logger.error("Stripe webhook error: #{e.message}")
+        head :internal_server_error
       end
 
       # GET /api/v1/payments
@@ -95,7 +92,9 @@ module Api
           {
             transaction_id: p.transaction_id,
             amount:         p.amount,
+            currency:       p.currency || "usd",
             status:         p.status,
+            provider:       p.provider,
             plan:           p.subscription&.plan,
             paid_at:        p.paid_at,
             created_at:     p.created_at

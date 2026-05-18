@@ -1,0 +1,62 @@
+DietVision — Bilan hebdomadaire Premium
+<%= @week_label %>
+========================================
+
+Bonjour <%= @user.name %>,
+
+<% if @total_calls == 0 %>
+Vous n'avez pas utilisé DietVision cette semaine. Votre coach IA est prêt quand vous l'êtes !
+<% elsif @activity_level == "high" %>
+Excellente semaine ! Vous avez été très actif. Voici votre bilan.
+<% else %>
+Voici le bilan de votre semaine sur DietVision.
+<% end %>
+
+------------------------------------
+VOS STATISTIQUES DE LA SEMAINE
+------------------------------------
+
+  Analyses repas      : <%= @analyses_count %>
+  Messages coach IA   : <%= @coach_count %>
+  Appels API total    : <%= @total_calls %>
+  Analyses ce mois    : <%= @analyses_month %>
+
+Niveau d'activité : <%= { "inactive" => "Aucune activite", "low" => "Debutant", "medium" => "Regulier", "high" => "Expert" }[@activity_level] %>
+
+------------------------------------
+VOTRE COMPTE PREMIUM
+------------------------------------
+
+  Plan                : Premium
+  Analyses / jour     : <%= AppConfig.premium_daily_limit %> (illimites)
+<% if @expires_at %>
+  Abonnement jusqu'au : <%= @expires_at.strftime("%-d %B %Y") %>
+<% end %>
+
+<% if @expiry_warning %>
+ATTENTION : Votre abonnement expire dans <%= @days_remaining %> jour<%= @days_remaining > 1 ? 's' : '' %> !
+Renouvelez sur : https://diet-vision.com
+<% end %>
+
+------------------------------------
+CONSEIL DE LA SEMAINE
+------------------------------------
+
+<% tips = [
+  "Photographiez vos repas des qu'ils sont servis pour une analyse plus precise.",
+  "Posez a votre coach IA des questions specifiques sur vos objectifs nutritionnels.",
+  "Analysez aussi vos snacks ! Ils representent souvent 20-30% de l'apport calorique.",
+  "Consultez vos graphiques chaque semaine pour suivre vos tendances.",
+  "Boire de l'eau avant chaque repas reduit l'apport calorique de 13% en moyenne.",
+  "Demandez a votre coach IA un plan de repas sur mesure pour vos objectifs.",
+] %>
+<%= tips[Date.today.cweek % tips.size] %>
+
+------------------------------------
+
+Ouvrir l'application : https://diet-vision.com
+
+Questions ? support@diet-vision.com
+
+(c) <%= Date.current.year %> DietVision
+Vous recevez ce bilan car vous etes abonne Premium.

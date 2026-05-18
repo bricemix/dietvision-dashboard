@@ -5,7 +5,7 @@
     <%= f.text_field :q, value: params[:q], placeholder: "Nom ou email…",
           class: "flex-1 min-w-[160px] max-w-xs px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500" %>
     <%= f.select :plan,
-          [["Tous plans", ""], ["Gratuit", "free"], ["Premium", "premium"]],
+          [["Tous plans", ""]] + @plans.map { |p| [p.name, p.slug] },
           { selected: params[:plan] },
           class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
     <%= f.select :status,
@@ -99,32 +99,71 @@
       <%# Section 2 — Plan %>
       <div class="border-t border-gray-800 pt-5">
         <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">💳 Plan & Accès</div>
+
+        <% # Données plans pour le JS %>
+        <% plans_data = @plans.map { |p| { slug: p.slug, name: p.name, free: p.price_eur_cents == 0 } } %>
+        <script>const PLANS_DATA = <%= plans_data.to_json.html_safe %>;</script>
+
         <div class="space-y-3">
           <div>
             <label class="block text-xs text-gray-400 mb-2">Plan attribué</label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
-                     onclick="handlePlanChange('free')">
-                <input type="radio" name="user[plan]" value="free" checked class="accent-[#C8FF00]" id="plan-free">
-                <div>
-                  <div class="text-sm font-semibold text-white">Gratuit</div>
-                  <div class="text-xs text-gray-500">Accès limité</div>
-                </div>
-              </label>
-              <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
-                     onclick="handlePlanChange('premium')">
-                <input type="radio" name="user[plan]" value="premium" class="accent-[#C8FF00]" id="plan-premium">
-                <div>
-                  <div class="text-sm font-semibold text-white">Premium</div>
-                  <div class="text-xs text-gray-500">Accès complet</div>
-                </div>
-              </label>
-            </div>
+            <% if @plans.any? %>
+              <div class="space-y-2">
+                <% @plans.each_with_index do |plan, idx| %>
+                  <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                         onclick="handlePlanChange('<%= plan.slug %>')">
+                    <input type="radio" name="user[plan]" value="<%= plan.slug %>"
+                           <%= idx == 0 ? "checked" : "" %>
+                           class="accent-[#C8FF00]" id="plan-<%= plan.slug %>">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-white"><%= plan.name %></span>
+                        <% if plan.badge.present? %>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                                style="background:rgba(200,255,0,0.12);color:#C8FF00;border:1px solid rgba(200,255,0,0.25)">
+                            <%= plan.badge.upcase %>
+                          </span>
+                        <% end %>
+                        <% if plan.active? %>
+                          <span class="text-[10px] text-green-500">● actif</span>
+                        <% elsif plan.draft? %>
+                          <span class="text-[10px] text-gray-600">brouillon</span>
+                        <% end %>
+                      </div>
+                      <div class="text-xs text-gray-500 mt-0.5">
+                        <%= plan.price_eur_cents == 0 ? "Gratuit" : plan.price_formatted + " / " + plan.frequency_label.downcase %>
+                        <% if plan.description.present? %>— <%= plan.description %><% end %>
+                      </div>
+                    </div>
+                  </label>
+                <% end %>
+              </div>
+            <% else %>
+              <%# Fallback si aucun plan en BDD %>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                       onclick="handlePlanChange('free')">
+                  <input type="radio" name="user[plan]" value="free" checked class="accent-[#C8FF00]" id="plan-free">
+                  <div>
+                    <div class="text-sm font-semibold text-white">Gratuit</div>
+                    <div class="text-xs text-gray-500">Accès limité</div>
+                  </div>
+                </label>
+                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                       onclick="handlePlanChange('premium')">
+                  <input type="radio" name="user[plan]" value="premium" class="accent-[#C8FF00]" id="plan-premium">
+                  <div>
+                    <div class="text-sm font-semibold text-white">Premium</div>
+                    <div class="text-xs text-gray-500">Accès complet</div>
+                  </div>
+                </label>
+              </div>
+            <% end %>
           </div>
 
-          <%# Durée abonnement premium (affiché si premium sélectionné) %>
+          <%# Durée abonnement (affiché si plan payant sélectionné) %>
           <div id="premium-options" class="hidden">
-            <label class="block text-xs text-gray-400 mb-1">Durée de l'abonnement premium</label>
+            <label class="block text-xs text-gray-400 mb-1">Durée d'accès</label>
             <div class="flex gap-2 flex-wrap mb-2">
               <% [[30,"30 jours"],[90,"3 mois"],[180,"6 mois"],[365,"1 an"]].each do |days, label| %>
                 <button type="button"
@@ -276,18 +315,21 @@
   }
 
   // ── Plan selection ────────────────────────────────────────────
-  function handlePlanChange(plan) {
+  function handlePlanChange(slug) {
+    // Détermine si le plan est payant (a un prix > 0)
+    const planMeta  = (typeof PLANS_DATA !== 'undefined')
+      ? PLANS_DATA.find(p => p.slug === slug)
+      : null;
+    const isPaid = planMeta ? !planMeta.free : (slug !== 'free');
+
     const premiumOpts = document.getElementById('premium-options');
-    if (plan === 'premium') {
-      premiumOpts.classList.remove('hidden');
-    } else {
-      premiumOpts.classList.add('hidden');
-    }
-    // Update radio button visual borders
+    isPaid ? premiumOpts.classList.remove('hidden') : premiumOpts.classList.add('hidden');
+
+    // Highlight radio sélectionné
     document.querySelectorAll('.plan-radio-label').forEach(label => {
       label.style.borderColor = '';
     });
-    const selected = document.getElementById('plan-' + plan);
+    const selected = document.getElementById('plan-' + slug);
     if (selected) {
       selected.closest('.plan-radio-label').style.borderColor = '#C8FF00';
     }

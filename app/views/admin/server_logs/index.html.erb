@@ -1,0 +1,237 @@
+<% content_for :title, "Logs serveur" %>
+
+<%# ── Stats ──────────────────────────────────────────────────────────────── %>
+<div class="grid grid-cols-4 gap-4 mb-6">
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Lignes affichées</div>
+    <div class="text-2xl font-bold text-white"><%= @total_lines %></div>
+    <div class="text-xs text-gray-600 mt-1">sur <%= @log_file_name %> (<%= @log_file_size %>)</div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-red-900/40 p-4">
+    <div class="text-xs text-red-500 uppercase tracking-wide mb-1">Erreurs</div>
+    <div class="text-2xl font-bold text-red-400"><%= @error_count %></div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-yellow-900/40 p-4">
+    <div class="text-xs text-yellow-500 uppercase tracking-wide mb-1">Warnings</div>
+    <div class="text-2xl font-bold text-yellow-400"><%= @warn_count %></div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Page</div>
+    <div class="text-2xl font-bold text-white"><%= @current_page %> / <%= @total_pages %></div>
+  </div>
+</div>
+
+<%# ── Filtres ─────────────────────────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 p-4 mb-4">
+  <%= form_with url: admin_server_logs_path, method: :get, class: "flex flex-wrap gap-3 items-end" do |f| %>
+
+    <%# Niveau %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-gray-500">Niveau</label>
+      <%= f.select :level,
+            [["Tous", "all"], ["ERROR", "ERROR"], ["WARN", "WARN"], ["INFO", "INFO"], ["DEBUG", "DEBUG"]],
+            { selected: params[:level] || "all" },
+            class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    </div>
+
+    <%# Source %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-gray-500">Source</label>
+      <%= f.select :source,
+            [["Toutes", "all"], ["API", "API"], ["Admin", "Admin"], ["Rails", "Rails"], ["Puma", "Puma"], ["Système", "Système"]],
+            { selected: params[:source] || "all" },
+            class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+    </div>
+
+    <%# Mot-clé %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-gray-500">Recherche</label>
+      <input type="text" name="keyword" value="<%= params[:keyword] %>"
+             placeholder="mot-clé, IP, endpoint…"
+             class="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 w-52">
+    </div>
+
+    <%# Date de %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-gray-500">Du</label>
+      <input type="date" name="date_from" value="<%= params[:date_from] %>"
+             class="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+    </div>
+
+    <%# Date à %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-gray-500">Au</label>
+      <input type="date" name="date_to" value="<%= params[:date_to] %>"
+             class="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+    </div>
+
+    <%# Boutons %>
+    <div class="flex gap-2">
+      <%= f.submit "Filtrer",
+            class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+      <%= link_to "Réinitialiser", admin_server_logs_path,
+            class: "px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 text-sm rounded-lg transition-colors" %>
+    </div>
+
+    <%# Boutons droite %>
+    <div class="ml-auto flex gap-2">
+      <%= link_to admin_download_server_logs_path,
+            class: "px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg transition-colors flex items-center gap-1.5" do %>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Télécharger
+      <% end %>
+
+      <%= button_to "🗑 Effacer les logs", admin_clear_server_logs_path,
+            method: :delete,
+            data: { confirm: "Effacer tous les logs ? Cette action est irréversible." },
+            class: "px-3 py-2 bg-red-950/60 hover:bg-red-900/60 text-red-400 text-xs rounded-lg transition-colors border border-red-900/40 cursor-pointer" %>
+    </div>
+
+  <% end %>
+</div>
+
+<%# ── Table des logs ──────────────────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden mb-4">
+  <table class="w-full text-xs">
+    <thead>
+      <tr class="border-b border-gray-800 text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-4 py-3 font-medium w-32">Niveau</th>
+        <th class="text-left px-4 py-3 font-medium w-24">Source</th>
+        <th class="text-left px-4 py-3 font-medium w-36">Horodatage</th>
+        <th class="text-left px-4 py-3 font-medium">Message</th>
+        <th class="text-left px-4 py-3 font-medium w-8"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800/50">
+      <% @lines.each do |line| %>
+        <% row_bg = case line[:level]
+                    when "ERROR" then "bg-red-950/20 hover:bg-red-950/40"
+                    when "WARN"  then "bg-yellow-950/20 hover:bg-yellow-950/40"
+                    else              "hover:bg-gray-800/30"
+                    end %>
+        <tr class="<%= row_bg %> transition-colors cursor-pointer" onclick="toggleDetail(<%= line[:id] %>)">
+
+          <%# Niveau %>
+          <td class="px-4 py-2 whitespace-nowrap">
+            <% badge_color = case line[:level]
+                             when "ERROR" then "bg-red-950/80 text-red-400 border-red-900/50"
+                             when "WARN"  then "bg-yellow-950/80 text-yellow-400 border-yellow-900/50"
+                             when "INFO"  then "bg-blue-950/80 text-blue-400 border-blue-900/50"
+                             else              "bg-gray-800 text-gray-500 border-gray-700"
+                             end %>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold tracking-wide <%= badge_color %>">
+              <% if line[:level] == "ERROR" %>
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              <% elsif line[:level] == "WARN" %>
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+              <% end %>
+              <%= line[:level] %>
+            </span>
+          </td>
+
+          <%# Source %>
+          <td class="px-4 py-2 whitespace-nowrap">
+            <% src_color = case line[:source]
+                           when "API"    then "text-purple-400"
+                           when "Admin"  then "text-lime-400"
+                           when "Rails"  then "text-blue-400"
+                           when "Puma"   then "text-orange-400"
+                           else               "text-gray-500"
+                           end %>
+            <span class="font-mono <%= src_color %>"><%= line[:source] %></span>
+          </td>
+
+          <%# Timestamp %>
+          <td class="px-4 py-2 text-gray-500 whitespace-nowrap font-mono">
+            <% if line[:timestamp] %>
+              <%= line[:timestamp].strftime("%d/%m %H:%M:%S") %>
+            <% else %>
+              —
+            <% end %>
+          </td>
+
+          <%# Message %>
+          <td class="px-4 py-2 text-gray-300 max-w-0">
+            <div class="truncate font-mono" style="max-width:600px">
+              <%= highlight_keywords(line[:message], params[:keyword]) %>
+            </div>
+          </td>
+
+          <%# Expand icon %>
+          <td class="px-3 py-2 text-gray-600">
+            <svg id="arrow-<%= line[:id] %>" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="transition-transform">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </td>
+        </tr>
+
+        <%# Ligne de détail (cachée par défaut) %>
+        <tr id="detail-<%= line[:id] %>" class="hidden">
+          <td colspan="5" class="px-4 pb-3 pt-0">
+            <div class="bg-gray-950 rounded-lg border border-gray-800 p-3">
+              <% if line[:uuid].present? %>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-gray-600 text-[10px] uppercase tracking-wide">Request ID</span>
+                  <span class="text-gray-400 font-mono text-[10px]"><%= line[:uuid] %></span>
+                </div>
+              <% end %>
+              <pre class="text-gray-300 text-[11px] font-mono whitespace-pre-wrap break-all leading-relaxed"><%= line[:raw] %></pre>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+
+      <% if @lines.empty? %>
+        <tr>
+          <td colspan="5" class="px-4 py-12 text-center text-gray-600">
+            <div class="text-3xl mb-2">📋</div>
+            <div>Aucune ligne de log ne correspond aux filtres</div>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%# ── Pagination ──────────────────────────────────────────────────────────── %>
+<% if @total_pages > 1 %>
+  <div class="flex items-center justify-between">
+    <div class="text-xs text-gray-500">
+      Page <%= @current_page %> sur <%= @total_pages %> — <%= @total_lines %> lignes au total
+    </div>
+    <div class="flex gap-2">
+      <% if @current_page > 1 %>
+        <%= link_to "← Précédent",
+              admin_server_logs_path(params.permit(:level, :source, :keyword, :date_from, :date_to).merge(page: @current_page - 1)),
+              class: "px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors" %>
+      <% end %>
+
+      <%# Pages numérotées (max 7 autour de la page courante) %>
+      <% page_range = ([1, @current_page - 3].max)..([  @total_pages, @current_page + 3].min) %>
+      <% page_range.each do |p| %>
+        <%= link_to p,
+              admin_server_logs_path(params.permit(:level, :source, :keyword, :date_from, :date_to).merge(page: p)),
+              class: "px-3 py-2 text-sm rounded-lg transition-colors #{p == @current_page ? 'bg-lime-400/10 text-lime-400 border border-lime-400/30' : 'bg-gray-800 hover:bg-gray-700 text-gray-400'}" %>
+      <% end %>
+
+      <% if @current_page < @total_pages %>
+        <%= link_to "Suivant →",
+              admin_server_logs_path(params.permit(:level, :source, :keyword, :date_from, :date_to).merge(page: @current_page + 1)),
+              class: "px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# ── Scripts ─────────────────────────────────────────────────────────────── %>
+<script>
+  function toggleDetail(id) {
+    const detail = document.getElementById('detail-' + id)
+    const arrow  = document.getElementById('arrow-' + id)
+    const isHidden = detail.classList.contains('hidden')
+    detail.classList.toggle('hidden', !isHidden)
+    arrow.style.transform = isHidden ? 'rotate(180deg)' : ''
+  }
+</script>

@@ -39,14 +39,66 @@
       </div>
     </div>
 
-    <div class="mt-4 pt-4 border-t border-gray-800">
+    <% if @user.in_trial? %>
+      <div class="mt-3 p-3 rounded-lg bg-purple-900/20 border border-purple-800/40">
+        <div class="text-xs text-purple-400 font-semibold">Essai en cours</div>
+        <div class="text-xs text-gray-400 mt-0.5">Expire le <%= @user.trial_ends_at.strftime("%d/%m/%Y") %> (<%= @user.trial_days_remaining %>j)</div>
+      </div>
+    <% end %>
+
+    <div class="mt-4 pt-4 border-t border-gray-800 space-y-3">
+      <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Actions</div>
+
+      <%# Changer de plan %>
+      <% if @plans.any? %>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Changer de plan</label>
+          <%= form_with url: admin_user_path(@user), method: :patch, class: "flex gap-2", local: true do |f| %>
+            <select name="user[plan]" class="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-xs text-white focus:border-[#C8FF00] focus:outline-none">
+              <% @plans.each do |plan| %>
+                <option value="<%= plan.slug %>" <%= @user.plan == plan.slug ? "selected" : "" %>>
+                  <%= plan.name %><%= plan.price_eur_cents > 0 ? " — #{plan.price_formatted}" : " (gratuit)" %>
+                </option>
+              <% end %>
+            </select>
+            <button type="submit"
+                    class="px-3 py-1.5 text-xs font-medium rounded border cursor-pointer transition-colors whitespace-nowrap"
+                    style="background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)">
+              Appliquer
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# Prolonger abonnement %>
+      <%= form_with url: extend_subscription_admin_user_path(@user), method: :post, class: "flex gap-2", local: true do |f| %>
+        <input type="number" name="days" value="30" min="1" max="365"
+               class="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-xs text-white text-center">
+        <button type="submit"
+                class="flex-1 py-1.5 text-xs font-medium rounded border cursor-pointer transition-colors"
+                style="background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)">
+          Prolonger (jours)
+        </button>
+      <% end %>
+
+      <%# Offrir accès gratuit %>
+      <%= form_with url: gift_access_admin_user_path(@user), method: :post, class: "flex gap-2", local: true do |f| %>
+        <input type="number" name="days" value="7" min="1" max="365"
+               class="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-xs text-white text-center">
+        <button type="submit"
+                class="flex-1 py-1.5 text-xs font-medium rounded border cursor-pointer transition-colors"
+                style="background:rgba(200,150,255,0.08);color:#c084fc;border-color:rgba(200,150,255,0.25)">
+          Offrir accès (jours)
+        </button>
+      <% end %>
+
       <% if @user.status == "active" %>
-        <%= button_to "Suspendre", suspend_admin_user_path(@user), method: :post,
-              class: "w-full py-2 text-xs bg-red-950 hover:bg-red-900/60 text-red-400
+        <%= button_to "Suspendre le compte", suspend_admin_user_path(@user), method: :post,
+              class: "w-full py-1.5 text-xs bg-red-950 hover:bg-red-900/60 text-red-400
                       rounded-lg border border-red-900 cursor-pointer transition-colors" %>
       <% else %>
-        <%= button_to "Réactiver", activate_admin_user_path(@user), method: :post,
-              class: "w-full py-2 text-xs rounded-lg border cursor-pointer transition-colors",
+        <%= button_to "Réactiver le compte", activate_admin_user_path(@user), method: :post,
+              class: "w-full py-1.5 text-xs rounded-lg border cursor-pointer transition-colors",
               style: "background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)" %>
       <% end %>
     </div>
@@ -57,7 +109,7 @@
     <%= stat_card "Appels API (mois)", @user.api_calls_this_month,                    icon_api,     "text-yellow-400" %>
     <%= stat_card "Total dépensé",     format_xof(@user.total_spent),                 icon_money,   "lime" %>
     <%= stat_card "Abonnements",       @subscriptions.count,                          icon_refresh, "text-blue-400" %>
-    <%= stat_card "Paiements réussis", @payments.count { _1.status == "success" },    icon_check,   "lime" %>
+    <%= stat_card "Paiements réussis", @all_payments.count { _1.status == "success" },    icon_check,   "lime" %>
   </div>
 </div>
 
@@ -93,36 +145,223 @@
   </table>
 </div>
 
-<%# ── Derniers appels API ────────────────────────────────── %>
-<div class="bg-gray-900 rounded-xl border border-gray-800">
-  <div class="px-5 py-4 border-b border-gray-800">
-    <h3 class="text-sm font-semibold text-gray-200">Derniers appels API</h3>
+<%# ── Profil nutritionnel ────────────────────────────────── %>
+<% if @fitai_profile.any? %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-4">
+  <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-gray-200">Profil nutritionnel</h3>
+    <span class="text-xs text-gray-500">Données synchronisées depuis l'app</span>
+  </div>
+  <div class="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+    <% profile_fields = [
+      ['Nom', @fitai_profile['name']],
+      ['Âge', @fitai_profile['age']],
+      ['Genre', @fitai_profile['gender']],
+      ['Poids', @fitai_profile['weight'] ? "#{@fitai_profile['weight']} kg" : nil],
+      ['Taille', @fitai_profile['height'] ? "#{@fitai_profile['height']} cm" : nil],
+      ['Objectif', @fitai_profile['goal']],
+      ['Activité', @fitai_profile['activity']],
+      ['IMC', @fitai_profile['bmi'] ? @fitai_profile['bmi'].to_f.round(1) : nil],
+      ['TDEE', @fitai_profile['tdee'] ? "#{@fitai_profile['tdee'].to_f.round(0).to_i} kcal/j" : nil],
+      ['Taille cible', @fitai_profile['goal_kg_per_week'] ? "#{@fitai_profile['goal_kg_per_week']} kg/sem" : nil],
+      ['Tour de taille', @fitai_profile['waist_cm'] ? "#{@fitai_profile['waist_cm']} cm" : nil],
+      ['Biceps', @fitai_profile['biceps_cm'] ? "#{@fitai_profile['biceps_cm']} cm" : nil],
+    ] %>
+    <% profile_fields.each do |label, value| %>
+      <% next if value.blank? %>
+      <div class="bg-gray-800/50 rounded-lg p-3">
+        <div class="text-xs text-gray-500 mb-1"><%= label %></div>
+        <div class="text-sm font-semibold text-gray-200"><%= value %></div>
+      </div>
+    <% end %>
+  </div>
+</div>
+<% end %>
+
+<%# ── Progressions corporelles ───────────────────────────── %>
+<% if @body_entries.any? %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-4">
+  <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-gray-200">Progressions corporelles</h3>
+    <span class="text-xs text-gray-500"><%= @body_entries.size %> entrée(s)</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="w-full text-sm min-w-[600px]">
+      <thead>
+        <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+          <th class="text-left px-5 py-2 font-medium">Date</th>
+          <th class="text-left px-4 py-2 font-medium">Poids</th>
+          <th class="text-left px-4 py-2 font-medium">Tour taille</th>
+          <th class="text-left px-4 py-2 font-medium">Biceps</th>
+          <th class="text-left px-4 py-2 font-medium">Ventre</th>
+          <th class="text-left px-4 py-2 font-medium">Notes</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @body_entries.last(50).reverse.each do |entry| %>
+          <tr class="hover:bg-gray-800/30 transition-colors">
+            <td class="px-5 py-2.5 text-gray-300 text-xs font-mono"><%= entry['date'] || entry['recorded_at'] || '—' %></td>
+            <td class="px-4 py-2.5 text-gray-200 font-semibold"><%= entry['weight'] ? "#{entry['weight']} kg" : '—' %></td>
+            <td class="px-4 py-2.5 text-gray-400 text-xs"><%= entry['waist_cm'] ? "#{entry['waist_cm']} cm" : '—' %></td>
+            <td class="px-4 py-2.5 text-gray-400 text-xs"><%= entry['biceps_cm'] ? "#{entry['biceps_cm']} cm" : '—' %></td>
+            <td class="px-4 py-2.5 text-gray-400 text-xs"><%= entry['belly_cm'] ? "#{entry['belly_cm']} cm" : '—' %></td>
+            <td class="px-4 py-2.5 text-gray-500 text-xs max-w-[160px] truncate"><%= entry['notes'] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ── Historique paiements complet ───────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-4">
+  <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-gray-200">Paiements</h3>
+    <span class="text-xs text-gray-500"><%= @all_payments.count %> paiement(s)</span>
   </div>
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
-        <th class="text-left px-5 py-2 font-medium">Endpoint</th>
-        <th class="text-left px-4 py-2 font-medium">Modèle</th>
-        <th class="text-left px-4 py-2 font-medium">Tokens</th>
-        <th class="text-left px-4 py-2 font-medium">Coût</th>
+        <th class="text-left px-5 py-2 font-medium">Montant</th>
+        <th class="text-left px-4 py-2 font-medium">Devise</th>
+        <th class="text-left px-4 py-2 font-medium">Opérateur</th>
+        <th class="text-left px-4 py-2 font-medium">Réf.</th>
         <th class="text-left px-4 py-2 font-medium">Statut</th>
         <th class="text-left px-4 py-2 font-medium">Date</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-800">
-      <% @api_usages.each do |u| %>
+      <% @all_payments.each do |p| %>
         <tr>
-          <td class="px-5 py-2.5 text-gray-300 font-mono text-xs"><%= u.endpoint %></td>
-          <td class="px-4 py-2.5 text-gray-500 text-xs truncate max-w-[140px]"><%= u.model %></td>
-          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= u.input_tokens %>+<%= u.output_tokens %></td>
-          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= format_usd(u.cost_usd) %></td>
-          <td class="px-4 py-2.5"><%= status_badge(u.status) %></td>
-          <td class="px-4 py-2.5 text-gray-500 text-xs"><%= u.created_at.strftime("%d/%m %H:%M") %></td>
+          <td class="px-5 py-2.5 text-gray-200 font-semibold"><%= p.amount %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= p.currency %></td>
+          <td class="px-4 py-2.5 text-gray-400 text-xs"><%= p.provider %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs font-mono truncate max-w-[100px]"><%= p.transaction_id %></td>
+          <td class="px-4 py-2.5"><%= status_badge(p.status) %></td>
+          <td class="px-4 py-2.5 text-gray-500 text-xs"><%= p.created_at.strftime("%d/%m/%Y %H:%M") %></td>
         </tr>
       <% end %>
-      <% if @api_usages.empty? %>
-        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-600">Aucun appel API</td></tr>
+      <% if @all_payments.empty? %>
+        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-600">Aucun paiement</td></tr>
       <% end %>
     </tbody>
   </table>
 </div>
+
+<%# ── Activité IA complète ───────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-4">
+  <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-gray-200">Activité IA complète</h3>
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-500"><%= @api_usages.size %> derniers appels</span>
+      <span class="text-xs px-2 py-1 rounded" style="background:rgba(200,255,0,0.08);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">
+        Total tokens : <%= number_with_delimiter(@api_usages.sum { |u| u.input_tokens + u.output_tokens }) %>
+      </span>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+          <th class="text-left px-5 py-2 font-medium">Endpoint</th>
+          <th class="text-left px-4 py-2 font-medium">Modèle</th>
+          <th class="text-left px-4 py-2 font-medium">Tokens entrée</th>
+          <th class="text-left px-4 py-2 font-medium">Tokens sortie</th>
+          <th class="text-left px-4 py-2 font-medium">Coût</th>
+          <th class="text-left px-4 py-2 font-medium">Durée</th>
+          <th class="text-left px-4 py-2 font-medium">Statut</th>
+          <th class="text-left px-4 py-2 font-medium">Date</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @api_usages.each do |u| %>
+          <tr class="hover:bg-gray-800/30 transition-colors">
+            <td class="px-5 py-2 text-gray-300 font-mono text-xs"><%= u.endpoint %></td>
+            <td class="px-4 py-2 text-gray-500 text-xs truncate max-w-[120px]"><%= u.model %></td>
+            <td class="px-4 py-2 text-gray-400 text-xs"><%= number_with_delimiter(u.input_tokens) %></td>
+            <td class="px-4 py-2 text-gray-400 text-xs"><%= number_with_delimiter(u.output_tokens) %></td>
+            <td class="px-4 py-2 text-gray-400 text-xs"><%= format_usd(u.cost_usd) %></td>
+            <td class="px-4 py-2 text-gray-500 text-xs"><%= u.duration_ms ? "#{u.duration_ms} ms" : '—' %></td>
+            <td class="px-4 py-2"><%= status_badge(u.status) %></td>
+            <td class="px-4 py-2 text-gray-500 text-xs"><%= u.created_at.strftime("%d/%m %H:%M") %></td>
+          </tr>
+        <% end %>
+        <% if @api_usages.empty? %>
+          <tr><td colspan="8" class="px-5 py-8 text-center text-gray-600">Aucun appel API</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%# ── Modal erreur ──────────────────────────────────────────────────────────── %>
+<div id="error-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeErrorModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
+    <div class="bg-gray-900 border border-red-900/60 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+        <div class="flex items-center gap-2.5">
+          <span class="flex items-center justify-center w-7 h-7 rounded-full bg-red-950/80 border border-red-900/50">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </span>
+          <span class="text-white font-semibold text-sm">Détail de l'erreur API</span>
+        </div>
+        <button type="button" onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-800">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="px-5 py-3 bg-gray-800/40 border-b border-gray-800 grid grid-cols-3 gap-3 text-xs">
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Endpoint</p>
+          <p id="modal-endpoint" class="text-gray-200 font-mono font-medium"></p>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Modèle</p>
+          <p id="modal-model" class="text-gray-400 truncate"></p>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-0.5 uppercase tracking-wide" style="font-size:10px">Date</p>
+          <p id="modal-date" class="text-gray-400"></p>
+        </div>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-2" style="font-size:10px">Message d'erreur</p>
+        <div class="bg-gray-950 border border-red-900/40 rounded-xl p-4">
+          <pre id="modal-error" class="text-red-300 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed"></pre>
+        </div>
+      </div>
+      <div class="px-5 pb-4 flex justify-between items-center">
+        <span id="modal-duration" class="text-xs text-gray-600"></span>
+        <button type="button" onclick="closeErrorModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors font-medium">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showErrorModal(btn) {
+    document.getElementById('modal-endpoint').textContent = btn.dataset.endpoint;
+    document.getElementById('modal-model').textContent    = btn.dataset.model;
+    document.getElementById('modal-date').textContent     = btn.dataset.date;
+    document.getElementById('modal-error').textContent    = btn.dataset.error;
+    document.getElementById('modal-duration').textContent = btn.dataset.duration + ' ms';
+    document.getElementById('error-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeErrorModal() {
+    document.getElementById('error-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeErrorModal();
+  });
+</script>

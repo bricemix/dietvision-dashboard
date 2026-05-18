@@ -1,0 +1,138 @@
+<% content_for :title, "Période d'essai" %>
+
+<%# ── Stats ──────────────────────────────────────────────── %>
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">En essai actuellement</div>
+    <div class="text-2xl font-bold text-purple-400"><%= @total_in_trial %></div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Essais expirés</div>
+    <div class="text-2xl font-bold text-gray-400"><%= @expired_trials %></div>
+  </div>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Convertis en payant</div>
+    <div class="text-2xl font-bold lime"><%= @converted %></div>
+    <div class="text-xs text-gray-500 mt-1">
+      <% total_trials = @expired_trials + @total_in_trial %>
+      <%= total_trials > 0 ? "#{(@converted.to_f / [@expired_trials, 1].max * 100).round(1)}% taux conv." : "—" %>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <%# ── Configuration ────────────────────────────────────── %>
+  <div>
+    <h2 class="text-sm font-semibold text-gray-200 mb-3">Configuration globale</h2>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+      <%= form_with url: admin_trial_config_path, method: :post, class: "space-y-4" do |f| %>
+
+        <%# Activation globale %>
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+          <div>
+            <div class="text-sm font-medium text-gray-200">Essai gratuit activé</div>
+            <div class="text-xs text-gray-500 mt-0.5">Les nouveaux inscrits bénéficient d'un essai</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="trial_enabled" value="true" class="sr-only peer"
+                   <%= @trial_enabled ? "checked" : "" %>>
+            <div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 peer-checked:bg-lime-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+          </label>
+        </div>
+
+        <%# Durée %>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Durée de l'essai (jours)</label>
+          <input type="number" name="trial_days" value="<%= @trial_days %>" min="1" max="90"
+                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-gray-500">
+        </div>
+
+        <%# Max par appareil %>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Nb max d'essais par numéro de téléphone</label>
+          <input type="number" name="trial_max_per_device" value="<%= @trial_max_per_device %>" min="1"
+                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-gray-500">
+        </div>
+
+        <%# Fonctionnalités -%>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-2">Fonctionnalités disponibles pendant l'essai</label>
+          <div class="space-y-2">
+            <% [
+              ["scan_ai",    "📸 Analyse photo IA"],
+              ["chatbot",    "🤖 Coach IA (chatbot)"],
+              ["graphs",     "📊 Graphiques & statistiques"],
+              ["pdf_export", "📄 Export PDF"]
+            ].each do |key, label| %>
+              <label class="flex items-center gap-3 p-2.5 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750 transition-colors">
+                <input type="checkbox" name="trial_features[<%= key %>]" value="1"
+                       <%= @trial_features[key] != false ? "checked" : "" %>
+                       class="accent-lime-400 w-4 h-4">
+                <span class="text-sm text-gray-300"><%= label %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Message expiration -%>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Message affiché à J-2 avant expiration</label>
+          <textarea name="trial_expiry_message" rows="3" placeholder="Votre essai expire dans 2 jours. Passez à Premium pour continuer…"
+                    class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 resize-none"><%= @trial_message %></textarea>
+        </div>
+
+        <button type="submit"
+                class="w-full py-2 text-sm font-semibold rounded-lg transition-colors"
+                style="background:#C8FF00;color:#0a0a0f">
+          Enregistrer la configuration
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Liste utilisateurs en essai ─────────────────────── %>
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-gray-200">Utilisateurs en essai (<%= @total_in_trial %>)</h2>
+    </div>
+
+    <%# Recherche %>
+    <%= form_with url: admin_trial_path, method: :get, class: "mb-3" do |f| %>
+      <%= f.text_field :q, value: params[:q], placeholder: "Rechercher…",
+            class: "w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500" %>
+    <% end %>
+
+    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <div class="divide-y divide-gray-800">
+        <% @trial_users.each do |user| %>
+          <div class="px-4 py-3 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-sm font-medium text-gray-100 truncate"><%= user.name %></div>
+              <div class="text-xs text-gray-500 truncate"><%= user.email %></div>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <% days = user.trial_days_remaining %>
+              <div class="text-sm font-semibold <%= days <= 2 ? 'text-red-400' : days <= 5 ? 'text-yellow-400' : 'lime' %>">
+                <%= days %>j restants
+              </div>
+              <div class="text-xs text-gray-600"><%= user.trial_ends_at.strftime("%d/%m/%Y") %></div>
+            </div>
+            <%# Prolonger %>
+            <%= form_with url: admin_trial_extend_path, method: :post, class: "flex items-center gap-1", local: true do |f| %>
+              <%= hidden_field_tag :user_id, user.id %>
+              <input type="number" name="days" value="7" min="1" max="30"
+                     class="w-14 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-white text-center">
+              <button type="submit" class="text-xs lime hover:underline whitespace-nowrap">+jours</button>
+            <% end %>
+          </div>
+        <% end %>
+        <% if @trial_users.empty? %>
+          <div class="px-4 py-10 text-center text-sm text-gray-600">Aucun utilisateur en essai</div>
+        <% end %>
+      </div>
+    </div>
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+
+</div>

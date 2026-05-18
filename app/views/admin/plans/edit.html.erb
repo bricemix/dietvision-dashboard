@@ -1,0 +1,6 @@
+<% content_for :title, "Modifier #{@plan.name}" %>
+<div class="mb-4">
+  <%= link_to "← Retour aux plans", admin_plans_path, class: "text-sm text-gray-500 hover:underline" %>
+</div>
+<h2 class="text-lg font-semibold text-white mb-4">Modifier le plan : <%= @plan.name %></h2>
+<%= render "form", plan: @plan %>

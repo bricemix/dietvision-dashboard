@@ -1,0 +1,62 @@
+<% content_for :title, "Audit trail" %>
+
+<div class="mb-4 flex gap-3">
+  <%= form_with url: admin_admin_logs_path, method: :get, class: "flex gap-2" do |f| %>
+    <input type="text" name="action_filter" value="<%= params[:action_filter] %>" placeholder="Filtrer par action…"
+           class="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 w-48">
+    <%= f.submit "Filtrer",
+          class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+  <% end %>
+</div>
+
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-3 font-medium">Date</th>
+        <th class="text-left px-4 py-3 font-medium">Admin</th>
+        <th class="text-left px-4 py-3 font-medium">Action</th>
+        <th class="text-left px-4 py-3 font-medium">Ressource</th>
+        <th class="text-left px-4 py-3 font-medium">Détails</th>
+        <th class="text-left px-4 py-3 font-medium">IP</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @logs.each do |log| %>
+        <tr class="hover:bg-gray-800/30">
+          <td class="px-5 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+            <%= log.created_at.strftime("%d/%m/%Y %H:%M") %>
+          </td>
+          <td class="px-4 py-2.5 text-sm text-gray-300">
+            <%= log.admin_user&.name || "—" %>
+          </td>
+          <td class="px-4 py-2.5">
+            <span class="font-mono text-xs px-2 py-0.5 rounded bg-gray-800 text-yellow-400">
+              <%= log.action %>
+            </span>
+          </td>
+          <td class="px-4 py-2.5 text-xs text-gray-400">
+            <% if log.resource_type.present? %>
+              <%= log.resource_type %> #<%= log.resource_id %>
+            <% else %>
+              —
+            <% end %>
+          </td>
+          <td class="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">
+            <% d = log.details %>
+            <% unless d.empty? %>
+              <%= d.map { |k, v| "#{k}: #{v}" }.join(" · ") %>
+            <% end %>
+          </td>
+          <td class="px-4 py-2.5 text-xs text-gray-600 font-mono">
+            <%= log.ip_address %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @logs.empty? %>
+        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-600">Aucune action enregistrée</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+<%= render "shared/pagination", pagy: @pagy %>

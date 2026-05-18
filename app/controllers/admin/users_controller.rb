@@ -8,6 +8,7 @@ module Admin
       scope = scope.in_trial                        if params[:trial] == "1"
 
       @pagy, @users = pagy(scope, limit: 25)
+      @plans = Plan.order(:position, :id)
     end
 
     def new
@@ -55,9 +56,13 @@ module Admin
     def show
       @user          = User.find(params[:id])
       @subscriptions = @user.subscriptions.order(created_at: :desc)
-      @payments      = @user.payments.order(created_at: :desc).limit(10)
-      @api_usages    = ApiUsage.where(user: @user).order(created_at: :desc).limit(20)
+      @api_usages    = ApiUsage.where(user: @user).order(created_at: :desc).limit(200)
+      @all_payments  = @user.payments.order(created_at: :desc)
+      @fitai_profile = begin; JSON.parse(@user.fitai_profile || '{}'); rescue; {}; end
+      @body_entries  = begin; JSON.parse(@user.body_entries_data || '[]'); rescue; []; end
+      @planning_data = begin; JSON.parse(@user.planning_data || '{}'); rescue; {}; end
       @usage_by_day  = ApiUsage.where(user: @user).by_day(30)
+      @plans         = Plan.order(:position, :id)
     end
 
     def update

@@ -1,0 +1,153 @@
+<% content_for :title, "Codes promo" %>
+
+<%# ── Header ─────────────────────────────────────────────── %>
+<div class="mb-6 flex items-center justify-between gap-4">
+  <div class="flex gap-3 items-center">
+    <%= form_with url: admin_promo_codes_path, method: :get, class: "flex gap-2" do |f| %>
+      <%= f.select :status,
+            [["Tous", ""], ["Actifs", "active"], ["Expirés", "expired"], ["Désactivés", "disabled"]],
+            { selected: params[:status] },
+            class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+      <%= f.submit "Filtrer", class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+    <% end %>
+    <div class="text-xs text-gray-500"><%= @total_active %> actifs · <%= @total_uses %> utilisations totales</div>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="document.getElementById('bulk-modal').classList.remove('hidden')"
+            class="px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-colors">
+      🎲 Génération en masse
+    </button>
+    <%= link_to "＋ Nouveau code", new_admin_promo_code_path,
+          class: "px-4 py-2 text-sm font-semibold rounded-lg",
+          style: "background:#C8FF00;color:#0a0a0f" %>
+  </div>
+</div>
+
+<%# ── Table ──────────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <th class="text-left px-5 py-3 font-medium">Code</th>
+        <th class="text-left px-4 py-3 font-medium">Réduction</th>
+        <th class="text-left px-4 py-3 font-medium">Utilisations</th>
+        <th class="text-left px-4 py-3 font-medium">Expiration</th>
+        <th class="text-left px-4 py-3 font-medium">Statut</th>
+        <th class="text-right px-5 py-3 font-medium">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800">
+      <% @promo_codes.each do |pc| %>
+        <tr class="hover:bg-gray-800/40 transition-colors">
+          <td class="px-5 py-3">
+            <span class="font-mono font-bold text-white text-base tracking-wider"><%= pc.code %></span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-sm font-semibold lime"><%= pc.discount_label %></span>
+            <div class="text-xs text-gray-500"><%= pc.discount_type == "percent" ? "Pourcentage" : "Montant fixe" %></div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm text-gray-200">
+              <%= pc.uses_count %>
+              <% if pc.max_uses_total %>
+                <span class="text-gray-600">/ <%= pc.max_uses_total %></span>
+                <%# Mini progress bar %>
+                <div class="w-16 bg-gray-800 rounded-full h-1 mt-1">
+                  <% pct = [(pc.uses_count.to_f / pc.max_uses_total * 100).round, 100].min %>
+                  <div class="rounded-full h-1" style="width:<%= pct %>%;background:#C8FF00"></div>
+                </div>
+              <% else %>
+                <span class="text-gray-600">/ ∞</span>
+              <% end %>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-400">
+            <% if pc.expires_at %>
+              <% if pc.expires_at.past? %>
+                <span class="text-red-400"><%= pc.expires_at.strftime("%d/%m/%Y") %> (exp.)</span>
+              <% else %>
+                <%= pc.expires_at.strftime("%d/%m/%Y") %>
+                <div class="text-gray-600"><%= distance_of_time_in_words_to_now(pc.expires_at) %></div>
+              <% end %>
+            <% else %>
+              <span class="text-gray-600">Sans limite</span>
+            <% end %>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+              <%= pc.status == 'active' ? 'bg-green-900/40 text-green-400' :
+                  pc.status == 'expired' ? 'bg-yellow-900/30 text-yellow-500' :
+                  'bg-red-900/30 text-red-400' %>">
+              <%= pc.status.upcase %>
+            </span>
+          </td>
+          <td class="px-5 py-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <%= link_to "Modifier", edit_admin_promo_code_path(pc), class: "text-xs lime hover:underline" %>
+              <% if pc.status == "active" %>
+                <%= button_to "Désactiver", disable_admin_promo_code_path(pc), method: :post,
+                      class: "text-xs text-yellow-400 hover:underline bg-transparent border-0 cursor-pointer p-0" %>
+              <% end %>
+              <%= button_to "Supprimer", admin_promo_code_path(pc), method: :delete,
+                    class: "text-xs text-red-400 hover:underline bg-transparent border-0 cursor-pointer p-0",
+                    data: { turbo_confirm: "Supprimer le code #{pc.code} ?" } %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+      <% if @promo_codes.empty? %>
+        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-600">Aucun code promo</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+<%= render "shared/pagination", pagy: @pagy %>
+
+<%# ── Modal génération en masse ─────────────────────────── %>
+<div id="bulk-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-6 w-full max-w-md mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-base font-semibold text-white">Génération en masse</h3>
+      <button onclick="document.getElementById('bulk-modal').classList.add('hidden')"
+              class="text-gray-500 hover:text-white">✕</button>
+    </div>
+    <%= form_with url: bulk_generate_admin_promo_codes_path, method: :post, local: true, class: "space-y-3" do |f| %>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Préfixe (optionnel)</label>
+          <input type="text" name="prefix" placeholder="NOVALAB" maxlength="8"
+                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white uppercase placeholder-gray-600">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Nombre de codes</label>
+          <input type="number" name="count" value="10" min="1" max="200"
+                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Type de réduction</label>
+          <select name="discount_type" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+            <option value="percent">Pourcentage (%)</option>
+            <option value="fixed">Montant fixe (Ar)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">Valeur</label>
+          <input type="number" name="discount_value" value="10" min="1" step="1"
+                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1">Date d'expiration (optionnel)</label>
+        <input type="date" name="expires_at"
+               class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white">
+      </div>
+      <button type="submit"
+              class="w-full py-2 text-sm font-semibold rounded-lg mt-1"
+              style="background:#C8FF00;color:#0a0a0f">
+        Générer les codes
+      </button>
+    <% end %>
+  </div>
+</div>

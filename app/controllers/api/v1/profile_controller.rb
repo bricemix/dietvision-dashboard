@@ -40,13 +40,38 @@ module Api
 
       # PUT /api/v1/user/fitai  (also aliased as PUT /api/v1/user/profile)
       def fitai_update
-        payload = request.request_parameters
+        body = json_body
         # Accept both top-level keys and nested fitai_profile key
-        profile_data = payload['fitai_profile'] || payload
-        profile_data = profile_data.to_unsafe_h if profile_data.respond_to?(:to_unsafe_h)
+        profile_data = body['fitai_profile'] || body
 
         if current_user.update(fitai_profile: profile_data.to_json)
           render json: { ok: true, fitai_profile: profile_data }
+        else
+          render json: { error: current_user.errors.full_messages.join(", ") },
+                 status: :unprocessable_entity
+        end
+      end
+
+      # ── Body entries (mesures corporelles) ──────────────────────────────────
+
+      # GET /api/v1/user/body_entries
+      def body_entries_show
+        data = parse_json(current_user.body_entries_data)
+        render json: { body_entries: data || [] }
+      end
+
+      # PUT /api/v1/user/body_entries
+      def body_entries_update
+        body = json_body
+        entries_data = body['body_entries'] || body
+
+        unless entries_data.is_a?(Array)
+          render json: { error: 'Format invalide — attendu un tableau de mesures' }, status: :bad_request
+          return
+        end
+
+        if current_user.update(body_entries_data: entries_data.to_json)
+          render json: { ok: true, entries_saved: entries_data.size }
         else
           render json: { error: current_user.errors.full_messages.join(", ") },
                  status: :unprocessable_entity
@@ -58,18 +83,22 @@ module Api
       # GET /api/v1/user/planning
       def planning_show
         data = parse_json(current_user.planning_data)
-        render json: { planning: data }
+        render json: { planning: data || [] }
       end
 
       # PUT /api/v1/user/planning
       def planning_update
-        payload = request.request_parameters
-        plans_data = payload['planning'] || payload['days'] || payload
-        plans_data = plans_data.to_unsafe_h if plans_data.respond_to?(:to_unsafe_h)
-        plans_json = plans_data.is_a?(Array) ? plans_data.to_json : plans_data.to_json
+        body = json_body
+        # Accept {"planning":[...]} or {"days":[...]} or raw array
+        plans_data = body['planning'] || body['days'] || body
 
-        if current_user.update(planning_data: plans_json)
-          render json: { ok: true }
+        unless plans_data.is_a?(Array)
+          render json: { error: 'Format invalide — attendu un tableau de jours' }, status: :bad_request
+          return
+        end
+
+        if current_user.update(planning_data: plans_data.to_json)
+          render json: { ok: true, days_saved: plans_data.size }
         else
           render json: { error: current_user.errors.full_messages.join(", ") },
                  status: :unprocessable_entity
@@ -95,6 +124,17 @@ module Api
           api_calls_today:         ApiUsage.where(user: current_user).today.count,
           daily_limit:             current_user.premium? ? AppConfig.premium_daily_limit : AppConfig.free_daily_limit
         }
+      end
+
+      # Lit et parse le corps JSON de la requête (robuste, évite ActionController::Parameters)
+      def json_body
+        raw = request.body.read
+        request.body.rewind
+        return {} if raw.blank?
+        body = JSON.parse(raw)
+        body.is_a?(Hash) ? body : {}
+      rescue JSON::ParserError
+        {}
       end
 
       def parse_json(raw)

@@ -1,0 +1,312 @@
+<style>
+  .lg-cont  { background:#0f172a; min-height:100vh; padding:30px; font-family:'Segoe UI',sans-serif; color:#f1f5f9; }
+  .lg-card  { background:#1e293b; border-radius:10px; padding:24px; margin-bottom:20px; border:1px solid #334155; }
+  .lg-title { font-size:11pt; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px; }
+  .lg-label { display:block; font-size:8.5pt; color:#94a3b8; margin-bottom:6px; }
+  .lg-input { background:#0f172a; border:1px solid #334155; border-radius:6px; padding:10px; color:#fff; font-size:10pt; width:100%; box-sizing:border-box; }
+  .lg-input:focus { border-color:#38bdf8; outline:none; }
+
+  .btn      { padding:8px 16px; border-radius:6px; font-weight:600; font-size:9pt; cursor:pointer; border:none; display:inline-flex; align-items:center; gap:5px; }
+  .btn-blue { background:#38bdf8; color:#0f172a; } .btn-blue:hover { background:#7dd3fc; }
+  .btn-green{ background:#166534; color:#86efac; } .btn-green:hover { background:#15803d; }
+  .btn-red  { background:#7f1d1d; color:#fca5a5; } .btn-red:hover { background:#991b1b; }
+  .btn-gray { background:#1e293b; color:#94a3b8; border:1px solid #334155; } .btn-gray:hover { color:#fff; }
+
+  /* Région tabs */
+  .region-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+  .rtab { padding:6px 14px; border-radius:7px; font-size:9pt; font-weight:600; cursor:pointer; border:1px solid #334155; background:#1e293b; color:#94a3b8; transition:all .15s; }
+  .rtab:hover { border-color:#38bdf8; color:#38bdf8; }
+  .rtab.active { background:#38bdf8; color:#0f172a; border-color:#38bdf8; }
+  .rtab .dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; }
+  .rtab .dot.on  { background:#4ade80; }
+  .rtab .dot.off { background:#475569; }
+
+  /* Tableau docs */
+  .doc-table { width:100%; border-collapse:collapse; font-size:9pt; }
+  .doc-table th { text-align:left; color:#64748b; font-weight:600; padding:8px 10px; border-bottom:1px solid #334155; font-size:8.5pt; }
+  .doc-table td { padding:9px 10px; border-bottom:1px solid #1e293b44; vertical-align:middle; }
+  .doc-table tr:hover td { background:#0f172a44; }
+
+  .badge-active { display:inline-flex;align-items:center;gap:4px;background:#14532d;color:#86efac;font-size:8.5pt;font-weight:700;padding:2px 8px;border-radius:5px;border:1px solid #166534; }
+  .badge-draft  { display:inline-flex;align-items:center;gap:4px;background:#1e293b;color:#475569;font-size:8.5pt;padding:2px 8px;border-radius:5px;border:1px solid #334155; }
+
+  /* Status overview grid */
+  .status-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  @media(max-width:700px) { .status-grid { grid-template-columns:1fr 1fr; } }
+  .status-card { background:#1e293b; border:1px solid #334155; border-radius:8px; padding:12px 14px; }
+  .status-card.has-doc { border-color:#166534; background:#0f2d1a; }
+  .status-card.partial  { border-color:#854d0e; background:#1c1206; }
+</style>
+
+<div class="lg-cont">
+  <div class="max-w-[900px] mx-auto">
+
+    <header class="mb-6 pb-4 border-b border-[#1e293b] flex items-start justify-between">
+      <div>
+        <h1 class="text-[20pt] font-bold text-white">🛡 Documents légaux</h1>
+        <p class="text-[#64748b] text-sm mt-1">RGPD / CGU par région. L'app mobile télécharge automatiquement le document actif de la région de l'utilisateur.</p>
+      </div>
+      <a href="<%= admin_legal_documents_path %>#upload" class="btn btn-blue">⬆ Uploader</a>
+    </header>
+
+    <% if notice.present? %>
+      <div class="p-3 mb-4 bg-green-950 border border-green-800 rounded-lg text-green-400 text-sm"><%= notice %></div>
+    <% end %>
+    <% if alert.present? %>
+      <div class="p-3 mb-4 bg-red-950 border border-red-800 rounded-lg text-red-400 text-sm"><%= alert %></div>
+    <% end %>
+
+    <%# ── Vue d'ensemble par région ── %>
+    <div class="lg-card">
+      <div class="lg-title">📊 Couverture par région</div>
+      <div class="status-grid">
+        <% LegalDocument::REGIONS.each do |key, info| %>
+          <% rgpd = @active_by_region[key][:rgpd]
+             cgu  = @active_by_region[key][:cgu]
+             both = rgpd&.file&.attached? && cgu&.file&.attached?
+             none = rgpd.nil? && cgu.nil?
+             css  = both ? "has-doc" : (none ? "" : "partial") %>
+          <div class="status-card <%= css %>">
+            <div class="font-bold text-[10pt] text-white mb-2"><%= info[:label] %></div>
+            <div class="text-[8pt] text-[#64748b] mb-2"><%= info[:law] %></div>
+            <div class="flex gap-2 flex-wrap">
+              <span class="text-[8.5pt] <%= rgpd&.file&.attached? ? 'text-green-400' : 'text-[#475569]' %>">
+                <%= rgpd&.file&.attached? ? "✓ RGPD v#{rgpd.version}" : "✗ RGPD" %>
+              </span>
+              <span class="text-[#334155]">·</span>
+              <span class="text-[8.5pt] <%= cgu&.file&.attached? ? 'text-green-400' : 'text-[#475569]' %>">
+                <%= cgu&.file&.attached? ? "✓ CGU v#{cgu.version}" : "✗ CGU" %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <div class="text-[8pt] text-[#475569] mt-1">
+        💡 Si aucun document n'est actif pour une région, l'app utilise le document <strong class="text-[#64748b]">🌍 Mondial</strong> comme fallback.
+      </div>
+    </div>
+
+    <%# ── Documents par type avec onglets région ── %>
+    <% %w[rgpd cgu].each do |type| %>
+      <div class="lg-card">
+        <div class="lg-title">
+          <%= type == "rgpd" ? "🔒 RGPD — Politique de confidentialité" : "📄 CGU — Conditions générales d'utilisation" %>
+        </div>
+
+        <%# Région tabs %>
+        <div class="region-tabs" id="tabs-<%= type %>">
+          <% regions_with_docs = (@docs_by_type[type] || {}).keys
+             LegalDocument::REGIONS.each_with_index do |(key, info), idx| %>
+            <%  has_docs   = regions_with_docs.include?(key)
+                has_active = @active_by_region[key][type.to_sym]&.file&.attached? %>
+            <button type="button"
+                    class="rtab <%= idx == 0 ? 'active' : '' %>"
+                    onclick="switchRegionTab('<%= type %>', '<%= key %>', this)">
+              <span class="dot <%= has_active ? 'on' : 'off' %>"></span>
+              <%= info[:label] %>
+            </button>
+          <% end %>
+        </div>
+
+        <%# Panneau par région %>
+        <% LegalDocument::REGIONS.each_with_index do |(key, info), idx| %>
+          <div id="panel-<%= type %>-<%= key %>" style="<%= idx > 0 ? 'display:none' : '' %>">
+            <% docs = (@docs_by_type[type] || {})[key] || [] %>
+            <% active_doc = @active_by_region[key][type.to_sym] %>
+
+            <% if active_doc&.file&.attached? %>
+              <div class="flex items-center gap-3 p-3 bg-[#0f2d1a] border border-[#166534] rounded-lg mb-3">
+                <div class="text-xl">✅</div>
+                <div class="flex-1">
+                  <span class="text-green-400 font-bold text-[9.5pt]">Document actif : </span>
+                  <span class="text-white text-[9.5pt]"><%= active_doc.filename %></span>
+                  <span class="text-[#64748b] text-[8.5pt] ml-2">v<%= active_doc.version %> · <%= active_doc.filesize_human %> · <%= active_doc.updated_at.strftime("%d/%m/%Y") %></span>
+                </div>
+                <%= link_to "👁 Voir",
+                            rails_blob_url(active_doc.file, disposition: "inline"),
+                            target: "_blank",
+                            class: "btn btn-gray text-xs" %>
+              </div>
+            <% else %>
+              <div class="flex items-center gap-3 p-3 bg-[#1c0d00] border border-[#854d0e] rounded-lg mb-3">
+                <div class="text-xl">⚠️</div>
+                <div class="flex-1 text-[9pt] text-yellow-500">
+                  Aucun document actif pour cette région.
+                  <% if key != "global" %>
+                    <span class="text-[#64748b]"> → L'app utilisera le document <strong>🌍 Mondial</strong> comme fallback.</span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <% if docs.any? %>
+              <table class="doc-table mb-2">
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Fichier</th>
+                    <th>Taille</th>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% docs.each do |doc| %>
+                    <tr>
+                      <td class="font-bold text-white">v<%= doc.version.presence || "—" %></td>
+                      <td class="text-[#94a3b8] max-w-[180px] truncate"><%= doc.filename %></td>
+                      <td class="text-[#64748b]"><%= doc.filesize_human %></td>
+                      <td class="text-[#64748b]"><%= doc.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+                      <td>
+                        <% if doc.active? %>
+                          <span class="badge-active">✓ Actif</span>
+                        <% else %>
+                          <span class="badge-draft">Inactif</span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <div class="flex gap-1">
+                          <% if doc.file.attached? %>
+                            <%= link_to "👁", rails_blob_url(doc.file, disposition: "inline"),
+                                        target: "_blank", class: "btn btn-gray text-xs", title: "Voir" %>
+                          <% end %>
+                          <% unless doc.active? %>
+                            <%= button_to "✓",
+                                          activate_admin_legal_document_path(doc),
+                                          method: :post, class: "btn btn-green text-xs",
+                                          title: "Activer",
+                                          data: { confirm: "Activer ce document ? L'ancien sera désactivé." } %>
+                            <%= button_to "✕",
+                                          admin_legal_document_path(doc),
+                                          method: :delete, class: "btn btn-red text-xs",
+                                          title: "Supprimer",
+                                          data: { confirm: "Supprimer cette version ?" } %>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            <% else %>
+              <p class="text-[#475569] text-sm italic py-2">Aucune version uploadée pour cette région.</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# ── Upload form ── %>
+    <div class="lg-card" id="upload">
+      <div class="lg-title">⬆ Uploader un nouveau document</div>
+
+      <%= form_with url: admin_legal_documents_path, method: :post, multipart: true do |f| %>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="lg-label">Type de document</label>
+            <select name="legal_document[document_type]" class="lg-input">
+              <option value="rgpd">RGPD — Politique de confidentialité</option>
+              <option value="cgu">CGU — Conditions générales</option>
+            </select>
+          </div>
+          <div>
+            <label class="lg-label">Région</label>
+            <select name="legal_document[region]" class="lg-input">
+              <% LegalDocument::REGIONS.each do |key, info| %>
+                <option value="<%= key %>"><%= info[:label] %> — <%= info[:law] %></option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="lg-label">Version (ex: 1.2)</label>
+            <input type="text" name="legal_document[version]" class="lg-input" placeholder="1.0" required>
+          </div>
+          <div class="flex items-end pb-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="activate" value="1"
+                     class="w-4 h-4 rounded accent-[#38bdf8]" checked>
+              <span class="text-sm text-[#94a3b8]">Activer immédiatement</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="lg-label">Fichier (PDF, HTML, TXT — max 10 Mo)</label>
+          <div class="border-2 border-dashed border-[#334155] rounded-lg p-6 text-center hover:border-[#38bdf8] transition-colors"
+               id="drop-zone"
+               ondragover="event.preventDefault();this.style.borderColor='#38bdf8'"
+               ondragleave="this.style.borderColor='#334155'"
+               ondrop="handleDrop(event)">
+            <input type="file" name="legal_document[file]" id="file-input"
+                   accept=".pdf,.html,.htm,.txt" class="hidden"
+                   onchange="updateFileLabel(this)">
+            <div id="file-label" class="text-[#64748b] text-sm">
+              <span class="text-3xl block mb-2">📄</span>
+              <span>Glissez-déposez ici ou </span>
+              <button type="button" onclick="document.getElementById('file-input').click()"
+                      class="text-[#38bdf8] underline">parcourir</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="lg-label">Notes internes (facultatif)</label>
+          <textarea name="legal_document[notes]" class="lg-input resize-none" style="height:48px"
+                    placeholder="Ex: Mise à jour clause IA générée..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-blue">Uploader le document</button>
+      <% end %>
+    </div>
+
+    <%# ── Endpoint API ── %>
+    <div class="lg-card">
+      <div class="lg-title">🔌 Endpoints API (mobile)</div>
+      <div class="text-[8.5pt] text-[#64748b] space-y-2 font-mono">
+        <div><span class="text-[#38bdf8]">GET</span> /api/v1/legal/rgpd<span class="text-[#475569]">?region=eu</span> &nbsp;→ document RGPD actif pour la région</div>
+        <div><span class="text-[#38bdf8]">GET</span> /api/v1/legal/cgu<span class="text-[#475569]">?region=eu</span> &nbsp;&nbsp;→ document CGU actif pour la région</div>
+        <div><span class="text-[#38bdf8]">GET</span> /api/v1/legal/regions &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ liste des régions disponibles</div>
+        <div class="text-[#334155] mt-2">Régions : <span class="text-[#94a3b8]">eu · us · uk · ca · br · global</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function switchRegionTab(type, region, btn) {
+    // Désactiver tous les onglets du type
+    document.querySelectorAll('#tabs-' + type + ' .rtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    // Masquer tous les panneaux du type
+    ['eu','us','uk','ca','br','global'].forEach(r => {
+      const p = document.getElementById('panel-' + type + '-' + r);
+      if (p) p.style.display = r === region ? '' : 'none';
+    });
+  }
+
+  function updateFileLabel(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const kb = (file.size / 1024).toFixed(1);
+    document.getElementById('file-label').innerHTML =
+      `<span class="text-3xl block mb-1">✅</span>` +
+      `<span class="text-white font-semibold">${file.name}</span>` +
+      `<span class="text-[#64748b] ml-2">(${kb} Ko)</span>`;
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').style.borderColor = '#334155';
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('file-input').files = dt.files;
+    updateFileLabel(document.getElementById('file-input'));
+  }
+</script>

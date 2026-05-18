@@ -1,0 +1,6 @@
+<% content_for :title, "Nouveau code promo" %>
+<div class="mb-4">
+  <%= link_to "← Retour aux codes promo", admin_promo_codes_path, class: "text-sm text-gray-500 hover:underline" %>
+</div>
+<h2 class="text-lg font-semibold text-white mb-4">Créer un code promo</h2>
+<%= render "form", promo_code: @promo_code %>

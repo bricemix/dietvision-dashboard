@@ -5,7 +5,7 @@ class Payment < ApplicationRecord
   before_create :generate_transaction_id
 
   validates :amount,   numericality: { greater_than: 0 }
-  validates :provider, inclusion: { in: %w[cinetpay mtn orange wave] }
+  validates :provider, inclusion: { in: %w[stripe cinetpay mtn orange wave mvola orange_money airtel_money] }
   validates :status,   inclusion: { in: %w[pending success failed refunded] }
 
   scope :successful, -> { where(status: "success") }

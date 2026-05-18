@@ -8,6 +8,7 @@ Rails.application.routes.draw do
       # Auth
       post   "auth/register",  to: "auth#register"
       post   "auth/login",     to: "auth#login"
+      delete "auth/logout",    to: "auth#logout"
       get    "auth/me",        to: "auth#me"
       post   "auth/refresh",   to: "auth#refresh"
 
@@ -17,6 +18,11 @@ Rails.application.routes.draw do
 
       # Plans (public)
       get    "plans",          to: "plans#index"
+
+      # Documents légaux (public — pas d'auth)
+      get    "legal/rgpd",    to: "legal#rgpd"
+      get    "legal/cgu",     to: "legal#cgu"
+      get    "legal/regions", to: "legal#regions"
 
       # Codes promo
       post   "promo_codes/validate", to: "promo_codes#validate"
@@ -32,12 +38,14 @@ Rails.application.routes.draw do
       patch  "profile",        to: "profile#update"
       get    "profile/usage",  to: "profile#usage"
 
-      # FitAI data (nutrition profile + planning)
-      get    "user/fitai",     to: "profile#fitai_show"
-      put    "user/fitai",     to: "profile#fitai_update"
-      put    "user/profile",   to: "profile#fitai_update"   # alias used by Flutter
-      put    "user/planning",  to: "profile#planning_update"
-      get    "user/planning",  to: "profile#planning_show"
+      # FitAI data (nutrition profile + planning + mesures corporelles)
+      get    "user/fitai",         to: "profile#fitai_show"
+      put    "user/fitai",         to: "profile#fitai_update"
+      put    "user/profile",       to: "profile#fitai_update"   # alias used by Flutter
+      get    "user/planning",      to: "profile#planning_show"
+      put    "user/planning",      to: "profile#planning_update"
+      get    "user/body_entries",  to: "profile#body_entries_show"
+      put    "user/body_entries",  to: "profile#body_entries_update"
 
       # Health check
       get    "health",         to: "health#show"
@@ -55,7 +63,7 @@ Rails.application.routes.draw do
     root to: "dashboard#index", as: :dashboard
 
     # Utilisateurs
-    resources :users, only: %i[index show update] do
+    resources :users, only: %i[index show update new create] do
       member do
         post :suspend
         post :activate
@@ -69,6 +77,10 @@ Rails.application.routes.draw do
       member do
         post :activate
         post :deactivate
+        post :sync_stripe
+      end
+      collection do
+        post :sync_all_stripe
       end
     end
 
@@ -92,13 +104,30 @@ Rails.application.routes.draw do
     get  "configs",                    to: "configs#index",          as: :configs
     post "configs",                    to: "configs#update"
     get  "configs/test_openrouter",    to: "configs#test_openrouter", as: :test_openrouter
+    get  "configs/test_stripe",        to: "configs#test_stripe",     as: :test_stripe
+    get  "configs/test_resend",        to: "configs#test_resend",     as: :test_resend
+    get  "configs/test_api",           to: "configs#test_api",        as: :test_api
 
     # Utilisation API
     resources :api_usages, only: %i[index]
 
     # Logs admin (audit trail)
     resources :admin_logs, only: %i[index]
+
+    # Logs serveur (puma.log)
+    get    "server_logs",          to: "server_logs#index",    as: :server_logs
+    get    "server_logs/download", to: "server_logs#download", as: :download_server_logs
+    delete "server_logs/clear",    to: "server_logs#clear",    as: :clear_server_logs
+
+    # Documents légaux (RGPD / CGU)
+    resources :legal_documents, only: %i[index create destroy] do
+      member { post :activate }
+    end
   end
+
+  # Pages de retour Stripe Checkout (success / cancel)
+  get  'payment/success', to: 'payment_pages#success', as: :payment_success
+  get  'payment/cancel',  to: 'payment_pages#cancel',  as: :payment_cancel
 
   # Redirection racine vers l'admin
   root to: redirect("/admin")

@@ -1,0 +1,1191 @@
+<style>
+  /* ── Feature rows ── */
+  .feat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    margin-bottom: 5px;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    user-select: none;
+    transition: background .12s, border-color .12s, opacity .12s;
+  }
+  .feat-row:hover            { background: #1f2937; border-color: #C8FF00; }
+  .feat-row.excl             { border-color: #3f1a1a; }
+  .feat-row.excl:hover       { border-color: #f87171; background: #1a0f0f; }
+
+  .drag-handle {
+    cursor: grab;
+    color: #4b5563;
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    transition: color .12s;
+  }
+  .feat-row:hover .drag-handle { color: #9ca3af; }
+  .drag-handle:active { cursor: grabbing; }
+
+  .feat-label { flex: 1; font-size: 13px; color: #e5e7eb; }
+  .feat-row.excl .feat-label { color: #fca5a5; }
+
+  .feat-del, .feat-edit {
+    background: none; border: none;
+    color: #4b5563; cursor: pointer;
+    font-size: 15px; padding: 0 4px; line-height: 1;
+    flex-shrink: 0; transition: color .12s;
+  }
+  .feat-del:hover  { color: #f87171; }
+  .feat-edit:hover { color: #C8FF00; }
+  .feat-edit.saving { color: #C8FF00 !important; }
+
+  .feat-edit-input {
+    display: none; flex: 1;
+    background: #1f2937; border: 1px solid #C8FF00;
+    border-radius: 5px; color: #fff;
+    font-size: 13px; padding: 3px 8px; outline: none;
+  }
+  .feat-row.excl .feat-edit-input { border-color: #f87171; background: #3f1a1a; }
+
+  /* SortableJS states */
+  .sortable-ghost  { opacity: .3; background: #1e3a20 !important; border: 1px dashed #C8FF00 !important; }
+  .sortable-chosen { box-shadow: 0 4px 20px rgba(200,255,0,.2); opacity: .95; }
+  .sortable-drag   { opacity: 0; }
+
+  /* Input base */
+  .f-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: border-color .15s;
+  }
+  .f-input:focus { border-color: #C8FF00; outline: none; }
+  .f-input::placeholder { color: #6b7280; }
+
+  /* Section card */
+  .f-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .f-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #6b7280;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Autocomplete dropdown */
+  .feat-ac-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: #1a2235;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .feat-ac-list--excl { border-color: #7f1d1d; }
+  .feat-ac-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #d1d5db;
+    cursor: pointer;
+    transition: background .1s;
+  }
+  .feat-ac-item:hover, .feat-ac-item.active { background: #263045; color: #fff; }
+  .feat-ac-item .ac-icon { font-size: 11px; opacity: .5; flex-shrink: 0; }
+  .feat-ac-item .ac-highlight { color: #C8FF00; font-weight: 700; }
+  .feat-ac-list--excl .feat-ac-item:hover { background: #3f1a1a; }
+  .feat-ac-list--excl .feat-ac-item .ac-highlight { color: #f87171; }
+  .feat-ac-empty { padding: 10px 14px; font-size: 12px; color: #4b5563; font-style: italic; }
+
+  /* Lang tabs */
+  .lang-tab {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #374151;
+    background: #1f2937;
+    color: #9ca3af;
+    transition: all .15s;
+  }
+  .lang-tab.active {
+    background: #C8FF00;
+    color: #0f172a;
+    border-color: #C8FF00;
+  }
+</style>
+
+<div class="max-w-[720px] mx-auto">
+  <%= form_with model: [:admin, plan], class: "space-y-4" do |f| %>
+
+    <% if plan.errors.any? %>
+      <div class="p-3 bg-red-950 border border-red-800 rounded-lg text-red-400 text-sm">
+        <%= plan.errors.full_messages.join(" · ") %>
+      </div>
+    <% end %>
+
+    <%# ── 0. Basé sur un plan existant (mode création uniquement) ── %>
+    <% if plan.new_record? && @existing_plans&.any? %>
+    <div class="f-card" style="border-color:rgba(200,255,0,0.2);background:rgba(200,255,0,0.03)">
+      <div class="f-section-title" style="color:#C8FF00">
+        ⚡ Basé sur un plan existant
+        <span class="text-[10px] font-normal text-gray-500">Optionnel — pré-remplit tous les champs</span>
+      </div>
+      <div class="flex gap-3 items-end">
+        <div class="flex-1">
+          <label class="block text-xs text-gray-400 mb-1">Choisir un plan de base</label>
+          <select id="base-plan-select" class="f-input" onchange="onBasePlanChange(this.value)" style="border-color:rgba(200,255,0,0.3)">
+            <option value="">(Créer de zéro)</option>
+            <% (@existing_plans || []).each do |p| %>
+              <option value="<%= p[:id] %>"><%= p[:name] %> — <%= Plan::FREQUENCY_LABELS[p[:billing_frequency]] || p[:billing_frequency] %></option>
+            <% end %>
+          </select>
+        </div>
+        <div id="base-plan-price-info" style="display:none;min-width:160px">
+          <label class="block text-xs text-gray-400 mb-1">Prix de base (EUR)</label>
+          <div id="base-plan-eur" class="f-input" style="background:#0d1117;border-color:rgba(200,255,0,0.3);color:#C8FF00;font-weight:700;cursor:default"></div>
+        </div>
+      </div>
+    </div>
+    <% end %>
+
+    <%# ── 1. Informations générales ── %>
+    <div class="f-card">
+      <div class="f-section-title">1 — Informations générales</div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Nom du plan <span class="text-red-400">*</span></label>
+          <%= f.text_field :name, placeholder: "Premium", class: "f-input" %>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Slug (identifiant unique)</label>
+          <%= f.text_field :slug, placeholder: "premium", class: "f-input" %>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Description (optionnelle)</label>
+        <%= f.text_area :description, class: "f-input resize-none", style: "height:60px", placeholder: "Décrivez les avantages de ce plan…" %>
+      </div>
+    </div>
+
+    <%# ── 2. Prix & Devises ── %>
+    <div class="f-card">
+      <div class="f-section-title">
+        2 — Prix & Devises
+        <span class="text-[10px] font-normal px-2 py-0.5 rounded" style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">EUR = devise principale</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Fréquence de facturation</label>
+          <%= f.select :billing_frequency,
+                [["Mensuel (1 mois)", "monthly"], ["Trimestriel (3 mois)", "quarterly"], ["Semestriel (6 mois)", "semi_annual"], ["Annuel (12 mois)", "yearly"]],
+                {}, class: "f-input" %>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1" id="mga-label">
+            Prix Ariary (MGA)
+            <span id="mga-auto-badge" style="display:none;margin-left:6px;font-size:9px;font-weight:700;color:#C8FF00;background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);border-radius:4px;padding:1px 6px;letter-spacing:.04em">AUTO</span>
+          </label>
+          <%= f.number_field :price_ariary, id: "price_ariary_field", class: "f-input", placeholder: "3025" %>
+          <p id="mga-rate-hint" style="display:none;font-size:10px;color:#6b7280;margin-top:4px"></p>
+        </div>
+      </div>
+
+      <%# Calcul % par rapport au plan de base %>
+      <div id="pct-from-base-section" style="display:none;margin-bottom:16px">
+        <div class="p-3 rounded-lg border" style="background:#0d1117;border-color:rgba(200,255,0,0.15)">
+          <label class="block text-xs mb-2" style="color:#C8FF00">
+            Réduction / Majoration par rapport au plan de base
+          </label>
+          <div class="flex items-center gap-3">
+            <div style="position:relative;width:140px">
+              <input type="number" id="pct-discount-input" step="0.1" min="-200" max="100"
+                     placeholder="ex: -20"
+                     class="f-input text-center font-bold"
+                     style="padding-right:28px;border-color:rgba(200,255,0,0.4);color:#C8FF00"
+                     oninput="onPctDiscountChange(this.value)">
+              <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#C8FF00;font-weight:700;pointer-events:none">%</span>
+            </div>
+            <div style="flex:1;font-size:12px;color:#6b7280" id="pct-preview-hint">
+              Entrez un % pour calculer le prix automatiquement
+            </div>
+          </div>
+          <div class="flex gap-2 mt-2 flex-wrap" id="pct-quick-btns">
+            <% [[-10,"-10%"],[-20,"-20%"],[-25,"-25%"],[-33,"-33%"],[-40,"-40%"],[-50,"-50%"]] .each do |v,l| %>
+              <button type="button" onclick="applyPctQuick(<%= v %>)"
+                      class="px-3 py-1 text-xs rounded-md transition-colors"
+                      style="background:#1f2937;border:1px solid #374151;color:#9ca3af;cursor:pointer">
+                <%= l %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <%# EUR principal %>
+      <div class="mb-4 p-3 rounded-lg border" style="background:#0d1117;border-color:rgba(200,255,0,0.2)">
+        <label class="block text-xs mb-1" style="color:#C8FF00">Prix EUR (principal) — ex: 3.99</label>
+        <input type="text" id="eur-price-input" name="plan[prices][EUR]"
+               value="<%= plan.prices["EUR"] ? (plan.prices["EUR"].to_i / 100.0) : '' %>"
+               class="f-input" placeholder="3.99"
+               oninput="onEurPriceChange(this.value)">
+      </div>
+
+      <%# Devises additionnelles %>
+      <div id="active-prices-container" class="grid grid-cols-2 gap-2 mb-4"></div>
+
+      <div class="pt-4 border-t border-gray-800">
+        <label class="block text-xs text-gray-400 mb-2">Ajouter une devise spécifique</label>
+        <div class="flex gap-2">
+          <select id="currency-select" class="f-input flex-1">
+            <option value="">Sélectionner…</option>
+            <option value="USD">Dollar (USD)</option>
+            <option value="XOF">Franc CFA (XOF)</option>
+            <option value="GBP">Livre sterling (GBP)</option>
+            <option value="CHF">Franc suisse (CHF)</option>
+            <option value="CAD">Dollar canadien (CAD)</option>
+            <option value="NGN">Naira (NGN)</option>
+            <option value="KES">Shilling kényan (KES)</option>
+          </select>
+          <button type="button" onclick="addCurrency()"
+                  class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors whitespace-nowrap">
+            Ajouter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <%# ── 2b. Rapports email automatiques ── %>
+    <div class="f-card">
+      <div class="f-section-title">
+        2b — Rapports email automatiques
+        <span class="text-[10px] font-normal px-2 py-0.5 rounded" style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">Envoyé automatiquement aux abonnés</span>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Fréquence d'envoi</label>
+          <%= f.select :email_report_frequency,
+                [["Jamais (désactivé)", "never"], ["Quotidien", "daily"], ["Hebdomadaire", "weekly"], ["Mensuel", "monthly"]],
+                {}, class: "f-input" %>
+        </div>
+        <div id="email-report-day-wrapper">
+          <label class="block text-xs text-gray-400 mb-1">Jour d'envoi (si hebdomadaire)</label>
+          <%= f.select :email_report_day,
+                [["Lundi", "monday"], ["Mardi", "tuesday"], ["Mercredi", "wednesday"],
+                 ["Jeudi", "thursday"], ["Vendredi", "friday"], ["Samedi", "saturday"], ["Dimanche", "sunday"]],
+                {}, class: "f-input" %>
+        </div>
+      </div>
+      <p class="text-xs text-gray-600 mt-2">Le rapport inclut : progressions corporelles, repas analysés, activité IA, statistiques de la période.</p>
+    </div>
+
+    <%# ── 3. Stripe ── %>
+    <div class="f-card">
+      <div class="f-section-title">
+        3 — Stripe (paiement récurrent)
+        <% if plan.stripe_price_id.present? %>
+          <span class="text-[10px] font-normal px-2 py-0.5 rounded bg-green-900/40 text-green-400 border border-green-800">✓ Configuré</span>
+        <% else %>
+          <span class="text-[10px] font-normal px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-500 border border-yellow-800">⚠ Non configuré</span>
+        <% end %>
+      </div>
+
+      <div class="mb-3 p-3 rounded-lg border border-gray-800 bg-gray-950 text-xs text-gray-500 leading-relaxed">
+        Créez un prix récurrent sur
+        <a href="https://dashboard.stripe.com/products" target="_blank" class="text-blue-400 hover:underline">dashboard.stripe.com/products</a>
+        puis collez l'ID ici. Format : <code class="text-gray-400 font-mono">price_1ABC…xyz</code><br>
+        <span class="text-gray-600">Ou utilisez le bouton "→ Stripe" dans la liste des plans pour le créer automatiquement.</span>
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Stripe Price ID</label>
+        <%= f.text_field :stripe_price_id,
+              placeholder: "price_1ABC...xyz",
+              class: "f-input font-mono",
+              style: plan.stripe_price_id.present? ? "border-color:#22c55e" : "" %>
+      </div>
+
+      <% if plan.stripe_price_id.present? %>
+        <p class="mt-2 text-xs text-green-400">✓ Le bouton "S'abonner" est actif dans l'application mobile.</p>
+      <% else %>
+        <p class="mt-2 text-xs text-yellow-500">⚠ Sans Price ID Stripe, le bouton affiche "Bientôt disponible" dans l'app.</p>
+      <% end %>
+    </div>
+
+    <%# ── 4. Fonctionnalités incluses ── %>
+    <div class="f-card">
+      <div class="f-section-title">
+        4 — Fonctionnalités incluses
+        <span class="text-[10px] font-normal text-green-400">affichées avec ✓</span>
+      </div>
+      <div id="features-container" class="mb-3">
+        <% (plan.features || []).each do |feat| %>
+          <div class="feat-row">
+            <span class="drag-handle">⠿</span>
+            <span class="feat-label"><%= feat %></span>
+            <input type="text" class="feat-edit-input" value="<%= feat %>">
+            <button type="button" class="feat-edit" onclick="toggleEditFeat(this)" title="Modifier">✎</button>
+            <button type="button" class="feat-del" onclick="this.parentElement.remove()" title="Supprimer">✕</button>
+            <input type="hidden" name="plan[features][]" value="<%= feat %>">
+          </div>
+        <% end %>
+      </div>
+      <%# Champ hybride autocomplete — fonctionnalités incluses %>
+      <div class="feat-autocomplete-wrap" style="position:relative">
+        <div class="flex gap-2">
+          <div style="position:relative;flex:1">
+            <input type="text" id="feature-input" class="f-input"
+                   placeholder="Saisie libre ou choisir dans la liste…"
+                   style="border-style:dashed;padding-right:36px"
+                   oninput="featAutoFilter('feature-input','feat-dropdown',false)"
+                   onkeydown="featAutoKey(event,'feature-input','feat-dropdown',false)"
+                   autocomplete="off">
+            <button type="button" tabindex="-1"
+                    onclick="featToggleAll('feature-input','feat-dropdown',false)"
+                    style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;font-size:16px;line-height:1" title="Voir toutes les suggestions">▾</button>
+          </div>
+          <button type="button" onclick="addFeatureTag()"
+                  class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">+</button>
+        </div>
+        <div id="feat-dropdown" class="feat-ac-list" style="display:none"></div>
+      </div>
+    </div>
+
+    <%# ── 5. Fonctionnalités exclues ── %>
+    <div class="f-card">
+      <div class="f-section-title">
+        5 — Fonctionnalités non incluses
+        <span class="text-[10px] font-normal text-red-400">affichées avec ✗ — montre ce que les plans sup. offrent</span>
+      </div>
+      <div id="features-excluded-container" class="mb-3">
+        <% (plan.features_excluded || []).each do |feat| %>
+          <div class="feat-row excl">
+            <span class="drag-handle">⠿</span>
+            <span class="feat-label"><%= feat %></span>
+            <input type="text" class="feat-edit-input" value="<%= feat %>">
+            <button type="button" class="feat-edit" onclick="toggleEditFeat(this)" title="Modifier">✎</button>
+            <button type="button" class="feat-del" onclick="this.parentElement.remove()" title="Supprimer">✕</button>
+            <input type="hidden" name="plan[features_excluded][]" value="<%= feat %>">
+          </div>
+        <% end %>
+      </div>
+      <%# Champ hybride autocomplete — fonctionnalités exclues %>
+      <div class="feat-autocomplete-wrap" style="position:relative">
+        <div class="flex gap-2">
+          <div style="position:relative;flex:1">
+            <input type="text" id="feature-excluded-input" class="f-input"
+                   placeholder="Saisie libre ou choisir dans la liste…"
+                   style="border-style:dashed;border-color:#f87171;padding-right:36px"
+                   oninput="featAutoFilter('feature-excluded-input','feat-excl-dropdown',true)"
+                   onkeydown="featAutoKey(event,'feature-excluded-input','feat-excl-dropdown',true)"
+                   autocomplete="off">
+            <button type="button" tabindex="-1"
+                    onclick="featToggleAll('feature-excluded-input','feat-excl-dropdown',true)"
+                    style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#f87171;cursor:pointer;font-size:16px;line-height:1" title="Voir toutes les suggestions">▾</button>
+          </div>
+          <button type="button" onclick="addExcludedTag()"
+                  class="px-4 py-2 text-sm rounded-lg transition-colors text-white"
+                  style="background:#7f1d1d">+</button>
+        </div>
+        <div id="feat-excl-dropdown" class="feat-ac-list feat-ac-list--excl" style="display:none"></div>
+      </div>
+    </div>
+
+    <%# ── 6. Opérateurs de paiement ── %>
+    <div class="f-card">
+      <div class="f-section-title">6 — Opérateurs de paiement mobile</div>
+      <div class="flex flex-wrap gap-3">
+        <% Plan::OPERATORS.each do |op| %>
+          <label class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors"
+                 style="background:#1f2937;border-color:#374151">
+            <input type="checkbox" name="plan[operators][]" value="<%= op %>"
+                   <%= plan.operators.include?(op) ? "checked" : "" %>
+                   class="accent-[#C8FF00]">
+            <span class="text-sm text-gray-300"><%= Plan::OPERATOR_LABELS[op] || op %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── 7. Bouton CTA ── %>
+    <div class="f-card">
+      <div class="f-section-title">7 — Bouton d'action (CTA)</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Texte du bouton</label>
+          <%= f.text_field :cta_label, placeholder: "Essayer 7 jours gratuits", class: "f-input" %>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Style du bouton</label>
+          <select name="plan[cta_style]" class="f-input">
+            <option value="outline"     <%= "selected" if plan.cta_style == "outline" %>>Contour (plan basique)</option>
+            <option value="lime"        <%= "selected" if plan.cta_style == "lime" %>>Vert lime (plan populaire)</option>
+            <option value="dark"        <%= "selected" if plan.cta_style == "dark" %>>Sombre (plan premium)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <%# ── 8. Badge & Prix barré ── %>
+    <div class="f-card">
+      <div class="f-section-title">8 — Badge & Prix barré (promo)</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Badge affiché</label>
+          <select name="plan[badge]" class="f-input">
+            <option value=""            <%= "selected" if plan.badge.blank? %>>(Aucun badge)</option>
+            <option value="popular"     <%= "selected" if plan.badge == "popular" %>>⭐ Le plus populaire</option>
+            <option value="recommended" <%= "selected" if plan.badge == "recommended" %>>★ Recommandé</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Prix barré EUR (promo) — ex: 7.00</label>
+          <input type="text" name="plan[original_price_eur_cents]"
+                 value="<%= plan.original_price_eur_cents.to_i > 0 ? (plan.original_price_eur_cents.to_f / 100).round(2) : '' %>"
+                 class="f-input" placeholder="7.00 (vide = aucun)">
+        </div>
+      </div>
+    </div>
+
+    <%# ── 9. Statut & Position ── %>
+    <div class="f-card">
+      <div class="f-section-title">9 — Statut & affichage</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Statut</label>
+          <select name="plan[status]" class="f-input">
+            <option value="draft"    <%= "selected" if plan.status == "draft" %>>Brouillon (invisible)</option>
+            <option value="active"   <%= "selected" if plan.status == "active" %>>Actif (visible dans l'app)</option>
+            <option value="inactive" <%= "selected" if plan.status == "inactive" %>>Inactif (masqué)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Position (ordre d'affichage)</label>
+          <%= f.number_field :position, class: "f-input", placeholder: "1", min: 0 %>
+        </div>
+      </div>
+    </div>
+
+    <%# ── 10. Traductions multilingues ── %>
+    <div class="f-card">
+      <div class="f-section-title">10 — Traductions multilingues
+        <span class="text-[10px] font-normal text-gray-600">Nom · Description · Fonctionnalités · Bouton</span>
+      </div>
+
+      <%# Tabs langue %>
+      <div class="flex gap-2 flex-wrap mb-5">
+        <% [["fr","🇫🇷","FR"],["en","🇬🇧","EN"],["de","🇩🇪","DE"],["es","🇪🇸","ES"]].each_with_index do |(lc, flag, label), idx| %>
+          <button type="button" onclick="switchTransLang('<%= lc %>')" id="tab-lang-<%= lc %>"
+                  class="lang-tab <%= idx == 0 ? 'active' : '' %>">
+            <%= flag %> <%= label %>
+          </button>
+        <% end %>
+      </div>
+
+      <%# Panneau par langue %>
+      <% [["fr","🇫🇷 Français"],["en","🇬🇧 English"],["de","🇩🇪 Deutsch"],["es","🇪🇸 Español"]].each_with_index do |(lc, lang_label), idx| %>
+        <div id="trans-panel-<%= lc %>" <%= idx > 0 ? 'style="display:none"' : '' %>>
+          <p class="text-xs text-gray-600 mb-3"><%= lang_label %> — laissez vide pour hériter des valeurs par défaut</p>
+
+          <div class="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Nom (<%= lc.upcase %>)</label>
+              <input type="text" name="plan[translations][<%= lc %>][name]"
+                     value="<%= plan.translations.dig(lc, 'name') %>"
+                     class="f-input" placeholder="<%= plan.name %>">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Texte bouton CTA (<%= lc.upcase %>)</label>
+              <input type="text" name="plan[translations][<%= lc %>][cta_label]"
+                     value="<%= plan.translations.dig(lc, 'cta_label') %>"
+                     class="f-input"
+                     placeholder="<%= lc == 'fr' ? 'Essayer 7 jours gratuits' : 'Try free for 7 days' %>">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="block text-xs text-gray-400 mb-1">Description (<%= lc.upcase %>)</label>
+            <textarea name="plan[translations][<%= lc %>][description]"
+                      class="f-input resize-none" style="height:52px"
+                      placeholder="<%= plan.description %>"><%= plan.translations.dig(lc, 'description') %></textarea>
+          </div>
+
+          <%# Features incluses %>
+          <div class="text-xs text-gray-500 mb-1">Fonctionnalités incluses ✓ (<%= lc.upcase %>)</div>
+          <div id="trans-feat-<%= lc %>" class="mb-2">
+            <% (plan.translations.dig(lc, 'features') || []).each do |feat| %>
+              <div class="feat-row">
+                <span class="drag-handle">⠿</span>
+                <span class="feat-label"><%= feat %></span>
+                <input type="text" class="feat-edit-input" value="<%= feat %>">
+                <button type="button" class="feat-edit" onclick="toggleEditFeat(this)" title="Modifier">✎</button>
+                <button type="button" class="feat-del" onclick="this.parentElement.remove()" title="Supprimer">✕</button>
+                <input type="hidden" name="plan[translations][<%= lc %>][features][]" value="<%= feat %>">
+              </div>
+            <% end %>
+          </div>
+          <div class="flex gap-2 mb-4">
+            <input type="text" id="trans-feat-input-<%= lc %>" class="f-input flex-1"
+                   style="border-style:dashed"
+                   placeholder="<%= lc == 'fr' ? 'Ex: 100 photos par mois' : 'Ex: 100 photos per month' %>">
+            <button type="button" onclick="addTransFeat('<%= lc %>')"
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">+</button>
+          </div>
+
+          <%# Features exclues %>
+          <div class="text-xs text-red-400 mb-1">Fonctionnalités non incluses ✗ (<%= lc.upcase %>)</div>
+          <div id="trans-excl-<%= lc %>" class="mb-2">
+            <% (plan.translations.dig(lc, 'features_excluded') || []).each do |feat| %>
+              <div class="feat-row excl">
+                <span class="drag-handle">⠿</span>
+                <span class="feat-label"><%= feat %></span>
+                <input type="text" class="feat-edit-input" value="<%= feat %>">
+                <button type="button" class="feat-edit" onclick="toggleEditFeat(this)" title="Modifier">✎</button>
+                <button type="button" class="feat-del" onclick="this.parentElement.remove()" title="Supprimer">✕</button>
+                <input type="hidden" name="plan[translations][<%= lc %>][features_excluded][]" value="<%= feat %>">
+              </div>
+            <% end %>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="trans-excl-input-<%= lc %>" class="f-input flex-1"
+                   style="border-style:dashed;border-color:#f87171"
+                   placeholder="<%= lc == 'fr' ? 'Ex: Rapport hebdomadaire' : 'Ex: Weekly report' %>">
+            <button type="button" onclick="addTransExcl('<%= lc %>')"
+                    class="px-4 py-2 text-sm rounded-lg text-white transition-colors"
+                    style="background:#7f1d1d">+</button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%# ── Actions ── %>
+    <div class="flex items-center justify-between pt-2 pb-6">
+      <%= link_to "Annuler", admin_plans_path, class: "text-sm text-gray-500 hover:text-gray-300 transition-colors" %>
+      <div class="flex gap-3">
+        <%= f.submit plan.new_record? ? "✓ Créer le plan" : "✓ Enregistrer les modifications",
+              class: "px-6 py-3 rounded-lg text-sm font-bold cursor-pointer transition-colors",
+              style: "background:#C8FF00;color:#0f172a" %>
+      </div>
+    </div>
+
+  <% end %>
+</div>
+
+<script>
+  // ── Devise dynamique ──────────────────────────────────────────
+  const _CENTS_CURRENCIES = new Set(['EUR','USD','GBP','CHF','CAD']);
+
+  /** Crée une ligne devise réutilisable (avec badge AUTO + hint taux). */
+  function _makeCurrencyRow(code, value = '', isAuto = false) {
+    const isCents = _CENTS_CURRENCIES.has(code);
+    const div = document.createElement('div');
+    div.dataset.currency = code;
+    div.className = 'p-3 rounded-lg border border-gray-700 bg-gray-900';
+    div.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;justify-content:space-between';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'text-xs font-bold text-gray-400';
+    lbl.style.minWidth = '36px';
+    lbl.textContent = code;
+
+    const autoBadge = document.createElement('span');
+    autoBadge.className = 'auto-badge';
+    autoBadge.style.cssText = 'font-size:9px;font-weight:700;color:#C8FF00;background:rgba(200,255,0,0.1);border:1px solid rgba(200,255,0,0.3);border-radius:4px;padding:1px 6px;white-space:nowrap;display:' + (isAuto ? 'inline' : 'none');
+    autoBadge.textContent = 'AUTO';
+
+    const inp = document.createElement('input');
+    inp.type = isCents ? 'text' : 'number';
+    inp.name = `plan[prices][${code}]`;
+    inp.className = 'f-input text-right';
+    inp.style.cssText = 'width:90px;' + (isAuto ? 'border-color:#C8FF00' : '');
+    inp.placeholder = isCents ? '3.99' : '3025';
+    if (value !== '' && value !== 0) inp.value = value;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '✕';
+    removeBtn.className = 'text-gray-600 hover:text-red-400 transition-colors';
+    removeBtn.onclick = () => div.remove();
+
+    const rateHint = document.createElement('div');
+    rateHint.className = 'rate-hint';
+    rateHint.style.cssText = 'font-size:10px;color:#6b7280;display:none';
+
+    // Effacer AUTO si l'utilisateur modifie manuellement
+    inp.addEventListener('input', () => {
+      div.dataset.autoFilled = '';
+      autoBadge.style.display = 'none';
+      inp.style.borderColor = '';
+      rateHint.style.display = 'none';
+    });
+
+    if (isAuto) div.dataset.autoFilled = '1';
+    row.append(lbl, autoBadge, inp, removeBtn);
+    div.append(row, rateHint);
+    return div;
+  }
+
+  function addCurrency() {
+    const sel = document.getElementById('currency-select');
+    if (!sel.value) return;
+    const code = sel.value;
+    // Éviter les doublons
+    if (document.querySelector(`#active-prices-container [data-currency="${code}"]`)) {
+      sel.value = ''; return;
+    }
+    document.getElementById('active-prices-container').appendChild(_makeCurrencyRow(code));
+    sel.value = '';
+    // Auto-remplir si EUR déjà saisi
+    const eurInp = document.getElementById('eur-price-input');
+    if (eurInp && eurInp.value) {
+      const eurAmt = parseFloat(eurInp.value.replace(',', '.'));
+      if (!isNaN(eurAmt) && eurAmt > 0) fetchEurRates(rates => _autoFillCurrencies(eurAmt, rates));
+    }
+  }
+
+  // ── Feature row factory ───────────────────────────────────────
+  function makeBadge(text, inputName, isExcl) {
+    const div = document.createElement('div');
+    div.className = 'feat-row' + (isExcl ? ' excl' : '');
+    const safe = text.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    div.innerHTML =
+      `<span class="drag-handle">⠿</span>` +
+      `<span class="feat-label">${safe}</span>` +
+      `<input type="text" class="feat-edit-input" value="${safe}">` +
+      `<button type="button" class="feat-edit" onclick="toggleEditFeat(this)" title="Modifier">✎</button>` +
+      `<button type="button" class="feat-del" onclick="this.parentElement.remove()" title="Supprimer">✕</button>` +
+      `<input type="hidden" name="${inputName}" value="${safe}">`;
+    return div;
+  }
+
+  // ── Inline edit ───────────────────────────────────────────────
+  function toggleEditFeat(btn) {
+    const row    = btn.parentElement;
+    const label  = row.querySelector('.feat-label');
+    const inp    = row.querySelector('.feat-edit-input');
+    const hidden = row.querySelector('input[type="hidden"]');
+    const editing = inp.style.display !== 'none' && inp.style.display !== '';
+
+    if (!editing) {
+      inp.value = label.textContent.trim();
+      inp.style.display   = 'block';
+      label.style.display = 'none';
+      btn.textContent     = '✓';
+      btn.classList.add('saving');
+      inp.focus(); inp.select();
+      inp.onkeydown = function(e) {
+        if (e.key === 'Enter')  { e.preventDefault(); toggleEditFeat(btn); }
+        if (e.key === 'Escape') { inp.value = label.textContent.trim(); toggleEditFeat(btn); }
+      };
+    } else {
+      const val = inp.value.trim();
+      if (val) { label.textContent = val; if (hidden) hidden.value = val; }
+      inp.style.display   = 'none';
+      label.style.display = '';
+      btn.textContent     = '✎';
+      btn.classList.remove('saving');
+    }
+  }
+
+  // ── Add feature / excluded ────────────────────────────────────
+  function addFeatureTag() {
+    const input = document.getElementById('feature-input');
+    if (!input.value.trim()) return;
+    document.getElementById('features-container').appendChild(
+      makeBadge(input.value.trim(), 'plan[features][]', false)
+    );
+    input.value = '';
+    initSortable();
+  }
+
+  function addExcludedTag() {
+    const input = document.getElementById('feature-excluded-input');
+    if (!input.value.trim()) return;
+    document.getElementById('features-excluded-container').appendChild(
+      makeBadge(input.value.trim(), 'plan[features_excluded][]', true)
+    );
+    input.value = '';
+    initSortable();
+  }
+
+  // ── Translation tabs ──────────────────────────────────────────
+  function switchTransLang(lc) {
+    ['fr','en','de','es'].forEach(l => {
+      const panel = document.getElementById('trans-panel-' + l);
+      const tab   = document.getElementById('tab-lang-' + l);
+      if (panel) panel.style.display = l === lc ? '' : 'none';
+      if (tab) {
+        tab.classList.toggle('active', l === lc);
+      }
+    });
+  }
+
+  function addTransFeat(lc) {
+    const input = document.getElementById('trans-feat-input-' + lc);
+    if (!input || !input.value.trim()) return;
+    document.getElementById('trans-feat-' + lc).appendChild(
+      makeBadge(input.value.trim(), `plan[translations][${lc}][features][]`, false)
+    );
+    input.value = '';
+    initSortable();
+  }
+
+  function addTransExcl(lc) {
+    const input = document.getElementById('trans-excl-input-' + lc);
+    if (!input || !input.value.trim()) return;
+    document.getElementById('trans-excl-' + lc).appendChild(
+      makeBadge(input.value.trim(), `plan[translations][${lc}][features_excluded][]`, true)
+    );
+    input.value = '';
+    initSortable();
+  }
+
+  // ── SortableJS ───────────────────────────────────────────────
+  function initSortable() {
+    if (typeof Sortable === 'undefined') return;
+    const opts = {
+      handle:       '.drag-handle',
+      animation:    180,
+      ghostClass:   'sortable-ghost',
+      chosenClass:  'sortable-chosen',
+      dragClass:    'sortable-drag',
+      forceFallback: false,
+      onEnd(evt) {
+        const input = evt.item.querySelector('input[type="hidden"]');
+        const label = evt.item.querySelector('.feat-label');
+        if (input && label) input.value = label.textContent.trim();
+      }
+    };
+    const ids = [
+      'features-container', 'features-excluded-container',
+      'trans-feat-fr','trans-feat-en','trans-feat-de','trans-feat-es',
+      'trans-excl-fr','trans-excl-en','trans-excl-de','trans-excl-es'
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el._sortable) el._sortable = Sortable.create(el, opts);
+    });
+  }
+
+  // ── Données plans existants (injection Rails) ─────────────
+  const _EXISTING_PLANS = <%= raw (@existing_plans || []).to_json %>;
+  let _basePlan = null; // plan sélectionné comme base
+
+  function onBasePlanChange(planId) {
+    _basePlan = _EXISTING_PLANS.find(p => String(p.id) === String(planId)) || null;
+
+    const pctSection = document.getElementById('pct-from-base-section');
+    const priceInfo  = document.getElementById('base-plan-price-info');
+    const eurDisplay = document.getElementById('base-plan-eur');
+
+    if (!_basePlan) {
+      if (pctSection)  pctSection.style.display  = 'none';
+      if (priceInfo)   priceInfo.style.display    = 'none';
+      if (document.getElementById('pct-discount-input'))
+        document.getElementById('pct-discount-input').value = '';
+      return;
+    }
+
+    // ── Pré-remplir tous les champs ──────────────────────────
+    // Nom
+    const nameField = document.querySelector('input[name="plan[name]"]');
+    if (nameField && !nameField.value) nameField.value = _basePlan.name;
+
+    // Slug (vide → on laisse le user saisir)
+    const slugField = document.querySelector('input[name="plan[slug]"]');
+    if (slugField && !slugField.value) slugField.value = '';
+
+    // Description
+    const descField = document.querySelector('textarea[name="plan[description]"]');
+    if (descField && !descField.value) descField.value = _basePlan.description || '';
+
+    // Badge
+    const badgeSelect = document.querySelector('select[name="plan[badge]"]');
+    if (badgeSelect && _basePlan.badge) badgeSelect.value = _basePlan.badge;
+
+    // CTA
+    const ctaLabel = document.querySelector('input[name="plan[cta_label]"]');
+    if (ctaLabel && !ctaLabel.value) ctaLabel.value = _basePlan.cta_label || '';
+    const ctaStyle = document.querySelector('select[name="plan[cta_style]"]');
+    if (ctaStyle && _basePlan.cta_style) ctaStyle.value = _basePlan.cta_style;
+
+    // Fréquence de facturation
+    const freqSelect = document.querySelector('select[name="plan[billing_frequency]"]');
+    if (freqSelect && _basePlan.billing_frequency) freqSelect.value = _basePlan.billing_frequency;
+
+    // Fonctionnalités incluses
+    const featContainer = document.getElementById('features-container');
+    if (featContainer && featContainer.children.length === 0 && _basePlan.features) {
+      _basePlan.features.forEach(f => {
+        const tmpInput = { value: f };
+        document.getElementById('feature-input').value = f;
+        addFeatureTag();
+      });
+    }
+
+    // Fonctionnalités exclues
+    const exclContainer = document.getElementById('features-excluded-container');
+    if (exclContainer && exclContainer.children.length === 0 && _basePlan.features_excluded) {
+      _basePlan.features_excluded.forEach(f => {
+        document.getElementById('feature-excluded-input').value = f;
+        addExcludedTag();
+      });
+    }
+
+    // Prix EUR de base → affichage
+    const baseEurCents = (_basePlan.prices && _basePlan.prices.EUR) ? _basePlan.prices.EUR : 0;
+    const baseEurAmt   = (baseEurCents / 100).toFixed(2);
+    if (eurDisplay) eurDisplay.textContent = baseEurAmt + ' €';
+    if (priceInfo)  priceInfo.style.display = 'block';
+    if (pctSection) pctSection.style.display = 'block';
+
+    // Appliquer le % si déjà saisi
+    const pctInput = document.getElementById('pct-discount-input');
+    if (pctInput && pctInput.value) onPctDiscountChange(pctInput.value);
+  }
+
+  function onPctDiscountChange(pctStr) {
+    if (!_basePlan) return;
+    const pct = parseFloat(pctStr);
+    if (isNaN(pct)) return;
+
+    const multiplier = 1 + pct / 100; // -20% → 0.80, +10% → 1.10
+    const baseEurCents = (_basePlan.prices && _basePlan.prices.EUR) ? _basePlan.prices.EUR : 0;
+
+    if (baseEurCents > 0) {
+      const newEur = Math.round(baseEurCents * multiplier) / 100;
+      const eurInput = document.getElementById('eur-price-input');
+      if (eurInput) {
+        eurInput.value = newEur.toFixed(2);
+        onEurPriceChange(eurInput.value); // déclenche auto-MGA
+      }
+
+      // Recalculer toutes les devises additionnelles
+      if (_basePlan.prices) {
+        Object.entries(_basePlan.prices).forEach(([code, cents]) => {
+          if (code === 'EUR') return;
+          const newAmt = Math.round(cents * multiplier);
+          const inp = document.querySelector(`input[name="plan[prices][${code}]"]`);
+          if (inp) {
+            const isCents = ['USD','GBP','CHF','CAD'].includes(code);
+            inp.value = isCents ? (newAmt / 100).toFixed(2) : newAmt;
+          } else {
+            // Créer le champ devise s'il n'existe pas encore
+            const isCents2 = _CENTS_CURRENCIES.has(code);
+            const displayVal = isCents2 ? (newAmt / 100).toFixed(2) : newAmt;
+            document.getElementById('active-prices-container')
+              .appendChild(_makeCurrencyRow(code, displayVal));
+          }
+        });
+      }
+    }
+
+    // Hint de prévisualisation
+    const hint = document.getElementById('pct-preview-hint');
+    if (hint && baseEurCents > 0) {
+      const newEur  = (baseEurCents * multiplier / 100).toFixed(2);
+      const saving  = (baseEurCents / 100 - newEur).toFixed(2);
+      const sign    = pct > 0 ? '+' : '';
+      hint.style.color = pct < 0 ? '#4ade80' : '#f87171';
+      hint.textContent = `${sign}${pct}% → ${newEur} € (${pct < 0 ? 'économie' : 'majoration'} de ${Math.abs(saving)} €)`;
+    }
+  }
+
+  function applyPctQuick(pct) {
+    const inp = document.getElementById('pct-discount-input');
+    if (inp) { inp.value = pct; onPctDiscountChange(pct); }
+    // Mettre en surbrillance le bouton sélectionné
+    document.querySelectorAll('#pct-quick-btns button').forEach(btn => {
+      btn.style.borderColor = btn.textContent.trim() === pct + '%' ? '#C8FF00' : '#374151';
+      btn.style.color       = btn.textContent.trim() === pct + '%' ? '#C8FF00' : '#9ca3af';
+    });
+  }
+
+  // ── Autocomplete fonctionnalités ──────────────────────────
+  // Toutes les fonctionnalités existantes (injectées depuis Rails)
+  const _ALL_FEATURES = <%= raw (@all_features || []).to_json %>;
+  let _acActiveIdx = -1;
+
+  function _featHighlight(text, query) {
+    if (!query) return text;
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    return text.replace(re, '<span class="ac-highlight">$1</span>');
+  }
+
+  function featAutoFilter(inputId, dropdownId, isExcl) {
+    const input = document.getElementById(inputId);
+    const dd    = document.getElementById(dropdownId);
+    if (!input || !dd) return;
+    const q = input.value.trim().toLowerCase();
+    _acActiveIdx = -1;
+    const current = _currentFeatures();
+    const matches = _ALL_FEATURES
+      .filter(f => !current.includes(f) && (!q || f.toLowerCase().includes(q)))
+      .slice(0, 30);
+    _featRenderDropdown(dd, matches, q, inputId, isExcl);
+  }
+
+  function featToggleAll(inputId, dropdownId, isExcl) {
+    const dd = document.getElementById(dropdownId);
+    if (!dd) return;
+    if (dd.style.display !== 'none') { dd.style.display = 'none'; return; }
+    const input = document.getElementById(inputId);
+    const q = (input && input.value.trim().toLowerCase()) || '';
+    const current = _currentFeatures();
+    const matches = _ALL_FEATURES.filter(f => !current.includes(f) && (!q || f.toLowerCase().includes(q)));
+    _featRenderDropdown(dd, matches, q, inputId, isExcl);
+    input && input.focus();
+  }
+
+  function _featRenderDropdown(dd, matches, q, inputId, isExcl) {
+    if (matches.length === 0) {
+      dd.innerHTML = '<div class="feat-ac-empty">Aucune suggestion — appuyez sur + pour ajouter</div>';
+      dd.style.display = 'block';
+      return;
+    }
+    dd.innerHTML = matches.map((f, i) =>
+      `<div class="feat-ac-item" data-val="${f.replace(/"/g,'&quot;')}"
+            onmousedown="featPickItem('${inputId}',this,${isExcl})">
+        <span class="ac-icon">${isExcl ? '✗' : '✓'}</span>
+        <span>${_featHighlight(f, q)}</span>
+       </div>`
+    ).join('');
+    dd.style.display = 'block';
+  }
+
+  function featPickItem(inputId, el, isExcl) {
+    const val = el.dataset.val;
+    if (!val) return;
+    if (isExcl) {
+      document.getElementById('feature-excluded-input').value = val;
+      addExcludedTag();
+    } else {
+      document.getElementById('feature-input').value = val;
+      addFeatureTag();
+    }
+    _featHideAll();
+  }
+
+  function featAutoKey(e, inputId, dropdownId, isExcl) {
+    const dd    = document.getElementById(dropdownId);
+    const items = dd ? dd.querySelectorAll('.feat-ac-item') : [];
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      _acActiveIdx = Math.min(_acActiveIdx + 1, items.length - 1);
+      _featUpdateActive(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      _acActiveIdx = Math.max(_acActiveIdx - 1, -1);
+      _featUpdateActive(items);
+    } else if (e.key === 'Enter') {
+      if (_acActiveIdx >= 0 && items[_acActiveIdx]) {
+        e.preventDefault();
+        featPickItem(inputId, items[_acActiveIdx], isExcl);
+      }
+      // Sinon laisser le + gérer l'ajout libre
+    } else if (e.key === 'Escape') {
+      _featHideAll();
+    }
+  }
+
+  function _featUpdateActive(items) {
+    items.forEach((el, i) => el.classList.toggle('active', i === _acActiveIdx));
+    if (_acActiveIdx >= 0 && items[_acActiveIdx]) {
+      items[_acActiveIdx].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function _featHideAll() {
+    ['feat-dropdown','feat-excl-dropdown'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    _acActiveIdx = -1;
+  }
+
+  function _currentFeatures() {
+    return Array.from(document.querySelectorAll(
+      '#features-container input[type="hidden"], #features-excluded-container input[type="hidden"]'
+    )).map(el => el.value.trim());
+  }
+
+  // Fermer en cliquant ailleurs
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('.feat-autocomplete-wrap')) _featHideAll();
+  });
+
+  // ── Auto-conversion EUR → toutes les devises ─────────────────
+  let _eurRates = null; // cache complet : { USD: 1.09, MGA: 4780, XOF: 655, … }
+
+  function _fallbackRates() {
+    return { USD: 1.09, MGA: 4780, XOF: 655, XAF: 655,
+             GBP: 0.86, CHF: 0.97, CAD: 1.48,
+             NGN: 1700, KES: 141, GHS: 16.5 };
+  }
+
+  function fetchEurRates(callback) {
+    if (_eurRates) { callback(_eurRates); return; }
+    fetch('https://open.er-api.com/v6/latest/EUR')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        _eurRates = (data && data.rates) ? data.rates : _fallbackRates();
+        callback(_eurRates);
+      })
+      .catch(() => { _eurRates = _fallbackRates(); callback(_eurRates); });
+  }
+
+  // Compatibilité ascendante (ancienne API utilisée par onEurPriceChange v1)
+  function fetchEurMgaRate(callback) {
+    fetchEurRates(rates => callback(rates.MGA || 4780));
+  }
+
+  function _autoFillCurrencies(eurAmount, rates) {
+    // 1. MGA (champ dédié séparé dans le formulaire)
+    const mgaField = document.getElementById('price_ariary_field');
+    const badge    = document.getElementById('mga-auto-badge');
+    const hint     = document.getElementById('mga-rate-hint');
+    if (mgaField && (parseInt(mgaField.value) || 0) === 0) {
+      const rate = rates.MGA || 4780;
+      mgaField.value = Math.round(eurAmount * rate);
+      mgaField.style.borderColor = '#C8FF00';
+      if (badge) badge.style.display = 'inline';
+      if (hint) {
+        hint.style.display = 'block';
+        hint.textContent = '1 EUR = ' + Math.round(rate).toLocaleString('fr-FR') + ' MGA (taux live)';
+      }
+    }
+
+    // 2. Toutes les devises ajoutées dans active-prices-container
+    document.querySelectorAll('#active-prices-container [data-currency]').forEach(wrapper => {
+      const code = wrapper.dataset.currency;
+      if (code === 'EUR') return;
+      const inp = wrapper.querySelector('input[type="text"], input[type="number"]');
+      if (!inp) return;
+      // N'auto-remplir que si vide (0) ou déjà marqué AUTO
+      const curVal = parseFloat(inp.value) || 0;
+      if (curVal !== 0 && !wrapper.dataset.autoFilled) return;
+
+      const rate = rates[code];
+      if (!rate) return;
+
+      const isCents = _CENTS_CURRENCIES.has(code);
+      inp.value = isCents ? (eurAmount * rate).toFixed(2) : Math.round(eurAmount * rate);
+      inp.style.borderColor = '#C8FF00';
+      wrapper.dataset.autoFilled = '1';
+
+      const ab = wrapper.querySelector('.auto-badge');
+      if (ab) ab.style.display = 'inline';
+
+      const rh = wrapper.querySelector('.rate-hint');
+      if (rh) {
+        const rd = isCents ? rate.toFixed(4) : Math.round(rate).toLocaleString('fr-FR');
+        rh.textContent = `1 EUR = ${rd} ${code} (taux live)`;
+        rh.style.display = 'block';
+      }
+    });
+  }
+
+  function onEurPriceChange(val) {
+    const eurAmount = parseFloat((val || '').replace(',', '.'));
+    if (!isNaN(eurAmount) && eurAmount > 0) {
+      fetchEurRates(rates => _autoFillCurrencies(eurAmount, rates));
+    } else {
+      // EUR vidé → réinitialiser MGA
+      const mgaField = document.getElementById('price_ariary_field');
+      if (mgaField) mgaField.style.borderColor = '';
+      const badge = document.getElementById('mga-auto-badge');
+      const hint  = document.getElementById('mga-rate-hint');
+      if (badge) badge.style.display = 'none';
+      if (hint)  hint.style.display = 'none';
+      // Réinitialiser les champs auto dans le container
+      document.querySelectorAll('#active-prices-container [data-currency]').forEach(wrapper => {
+        if (!wrapper.dataset.autoFilled) return;
+        wrapper.dataset.autoFilled = '';
+        const inp = wrapper.querySelector('input');
+        if (inp) { inp.value = ''; inp.style.borderColor = ''; }
+        const ab = wrapper.querySelector('.auto-badge');
+        if (ab) ab.style.display = 'none';
+        const rh = wrapper.querySelector('.rate-hint');
+        if (rh) rh.style.display = 'none';
+      });
+    }
+  }
+
+  // ── Email report frequency toggle ─────────────────────────
+  (function() {
+    const freqSel = document.querySelector('select[name="plan[email_report_frequency]"]');
+    const dayWrap = document.getElementById('email-report-day-wrapper');
+    if (!freqSel || !dayWrap) return;
+    function toggleDay() {
+      dayWrap.style.display = freqSel.value === 'weekly' ? '' : 'none';
+    }
+    freqSel.addEventListener('change', toggleDay);
+    toggleDay();
+  })();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Charger les devises existantes du plan en mode édition
+    const _existingPrices = <%= raw plan.prices.to_json %>;
+    const pricesContainer = document.getElementById('active-prices-container');
+    if (pricesContainer && _existingPrices) {
+      Object.entries(_existingPrices).forEach(([code, amount]) => {
+        if (code === 'EUR') return; // EUR a son propre champ dédié
+        if (!amount || amount <= 0) return;
+        if (document.querySelector(`#active-prices-container [data-currency="${code}"]`)) return;
+        const isCents = _CENTS_CURRENCIES.has(code);
+        const displayVal = isCents ? (amount / 100).toFixed(2) : amount;
+        pricesContainer.appendChild(_makeCurrencyRow(code, displayVal));
+      });
+    }
+
+    // MGA modifié manuellement → retirer badge AUTO
+    const mgaField = document.getElementById('price_ariary_field');
+    if (mgaField) {
+      mgaField.addEventListener('input', () => {
+        const badge = document.getElementById('mga-auto-badge');
+        const hint  = document.getElementById('mga-rate-hint');
+        if (badge) badge.style.display = 'none';
+        if (hint)  hint.style.display = 'none';
+        mgaField.style.borderColor = '';
+      });
+    }
+
+    // Déclencher auto-fill si EUR déjà rempli (mode édition)
+    const eurInput = document.getElementById('eur-price-input');
+    if (eurInput && eurInput.value) onEurPriceChange(eurInput.value);
+  });
+</script>
+
+<%# SortableJS %>
+<script src="/sortable.min.js" onload="initSortable()"></script>
+<script>if (typeof Sortable !== 'undefined') setTimeout(initSortable, 0);</script>

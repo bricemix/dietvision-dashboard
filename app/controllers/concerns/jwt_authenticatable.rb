@@ -39,8 +39,20 @@ module JwtAuthenticatable
 
     payload = JwtAuthenticatable.decode(token)
     @current_user = User.find_by(id: payload[:user_id])
-    render_unauthorized("Utilisateur introuvable") unless @current_user
-    render_unauthorized("Compte suspendu") if @current_user&.status == "suspended"
+
+    return render_unauthorized("Utilisateur introuvable") unless @current_user
+    return render_unauthorized("Compte suspendu")         if @current_user.status == "suspended"
+
+    # ── Session unique : un seul appareil à la fois ───────────────────────────
+    # Si l'utilisateur s'est reconnecté sur un autre appareil, session_token
+    # aura changé en base → l'ancien token JWT devient invalide.
+    if @current_user.session_token.present? &&
+        payload[:session_token] != @current_user.session_token
+      return render json: {
+        error: "Votre compte a été connecté sur un autre appareil.",
+        code:  "SESSION_INVALIDATED"
+      }, status: :unauthorized
+    end
   rescue => e
     render_unauthorized(e.message)
   end

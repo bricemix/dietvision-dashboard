@@ -1,71 +1,374 @@
 <% content_for :title, "Configuration" %>
 
-<div class="max-w-2xl">
-  <%= form_with url: admin_configs_path, method: :post, class: "space-y-4" do |f| %>
+<%# ── Panel de tests API ──────────────────────────────────────────────── %>
+<div class="max-w-2xl mb-8">
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-sm font-bold text-white">🔌 Tests de connectivité API</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Vérifiez que tous les services externes répondent correctement</p>
+      </div>
+      <button type="button" onclick="runAllTests()"
+              id="btn-all"
+              class="px-4 py-2 bg-[#C8FF00] hover:bg-[#b8ef00] text-black text-xs font-bold rounded-lg transition-colors">
+        ▶ Tout tester
+      </button>
+    </div>
 
-    <% @configs.each do |cfg| %>
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <label class="block text-sm font-medium text-gray-200 mb-1">
-          <%= cfg[:description] || cfg[:key] %>
-        </label>
-        <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+    <div class="grid grid-cols-2 gap-3" id="test-grid">
 
-        <% is_secret = cfg[:key].include?("api_key") %>
-        <% field_name = "configs[#{cfg[:key]}]" %>
-        <% field_class = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono" %>
+      <%# OpenRouter %>
+      <div class="test-card bg-gray-800 rounded-lg p-4 border border-gray-700" id="card-openrouter">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🤖</span>
+            <span class="text-sm font-semibold text-white">OpenRouter</span>
+          </div>
+          <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+        </div>
+        <p class="text-xs text-gray-500 mb-3">IA Coach + Analyse photo</p>
+        <div class="test-result text-xs text-gray-500 mb-3 min-h-[32px]"></div>
+        <button type="button" onclick="testService('openrouter')"
+                class="test-btn w-full py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-md transition-colors">
+          Tester
+        </button>
+      </div>
 
-        <% if is_secret %>
-          <input type="password"
-                 name="<%= field_name %>"
-                 placeholder="<%= cfg[:value].present? ? '••••••••••• (défini)' : 'Non configuré' %>"
-                 class="<%= field_class %>">
-        <% else %>
-          <input type="text"
-                 name="<%= field_name %>"
-                 value="<%= cfg[:value] %>"
-                 class="<%= field_class %>">
+      <%# Stripe %>
+      <div class="test-card bg-gray-800 rounded-lg p-4 border border-gray-700" id="card-stripe">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">💳</span>
+            <span class="text-sm font-semibold text-white">Stripe</span>
+          </div>
+          <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+        </div>
+        <p class="text-xs text-gray-500 mb-3">Paiements & abonnements</p>
+        <div class="test-result text-xs text-gray-500 mb-3 min-h-[32px]"></div>
+        <button type="button" onclick="testService('stripe')"
+                class="test-btn w-full py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-md transition-colors">
+          Tester
+        </button>
+      </div>
+
+      <%# Resend %>
+      <div class="test-card bg-gray-800 rounded-lg p-4 border border-gray-700" id="card-resend">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📧</span>
+            <span class="text-sm font-semibold text-white">Resend</span>
+          </div>
+          <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+        </div>
+        <p class="text-xs text-gray-500 mb-3">Emails transactionnels</p>
+        <div class="test-result text-xs text-gray-500 mb-3 min-h-[32px]"></div>
+        <button type="button" onclick="testService('resend')"
+                class="test-btn w-full py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-md transition-colors">
+          Tester
+        </button>
+      </div>
+
+      <%# API DietVision %>
+      <div class="test-card bg-gray-800 rounded-lg p-4 border border-gray-700" id="card-api">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🚀</span>
+            <span class="text-sm font-semibold text-white">API DietVision</span>
+          </div>
+          <span class="status-dot w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></span>
+        </div>
+        <p class="text-xs text-gray-500 mb-3">Endpoints mobiles publics</p>
+        <div class="test-result text-xs text-gray-500 mb-3 min-h-[32px]"></div>
+        <button type="button" onclick="testService('api')"
+                class="test-btn w-full py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-md transition-colors">
+          Tester
+        </button>
+      </div>
+
+    </div>
+
+    <%# Barre de statut globale %>
+    <div id="global-status" class="mt-3 text-xs text-gray-600 text-center hidden">
+      Dernière vérification : <span id="last-check"></span>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-2xl space-y-8">
+  <%= form_with url: admin_configs_path, method: :post, class: "space-y-8" do |f| %>
+
+    <%# ── IA ───────────────────────────────────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Intelligence Artificielle</h2>
+      <div class="space-y-4">
+        <% %w[openrouter_api_key openrouter_default_model openrouter_vision_model free_plan_daily_limit premium_plan_daily_limit].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <% val = cfg[:value].to_s %>
+          <% field_class = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono" %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+
+            <% if cfg[:key].include?("api_key") %>
+              <%# Clé secrète : affichage masqué + bouton Modifier %>
+              <% masked = val.present? ? (val[0..11] + "••••••••" + val[-4..]) : nil %>
+              <% if val.present? %>
+                <div id="display-<%= key %>" class="flex items-center gap-3 mb-2">
+                  <span class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-mono text-gray-300 truncate">
+                    <%= masked %>
+                  </span>
+                  <span class="text-xs font-semibold shrink-0" style="color:#C8FF00">✓ Défini</span>
+                  <button type="button" onclick="editStripeKey('<%= key %>')"
+                          class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg cursor-pointer transition-colors">
+                    ✏️ Modifier
+                  </button>
+                </div>
+              <% end %>
+              <div id="edit-<%= key %>" class="<%= val.present? ? 'hidden' : '' %>">
+                <div class="flex gap-2">
+                  <input type="text" id="input-<%= key %>" name="configs[<%= key %>]"
+                         autocomplete="off"
+                         placeholder="sk-or-v1-..."
+                         class="flex-1 px-3 py-2.5 bg-gray-800 border border-blue-600 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-blue-400">
+                  <% if val.present? %>
+                    <button type="button" onclick="cancelEditKey('<%= key %>')"
+                            class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg cursor-pointer">
+                      Annuler
+                    </button>
+                  <% end %>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">Laissez vide pour conserver la valeur actuelle.</p>
+              </div>
+            <% else %>
+              <%# Champs texte normaux (modèles, limites…) %>
+              <input type="text" name="configs[<%= key %>]"
+                     value="<%= val %>" class="<%= field_class %>">
+            <% end %>
+          </div>
         <% end %>
       </div>
-    <% end %>
+    </div>
+
+    <%# ── Stripe ─────────────────────────────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Paiements — Stripe</h2>
+      <p class="text-xs text-gray-600 mb-3">
+        Obtenez vos clés sur
+        <a href="https://dashboard.stripe.com/apikeys" target="_blank" class="text-gray-400 hover:text-white underline">dashboard.stripe.com/apikeys</a>.
+        Le webhook secret se génère dans Webhooks → endpoint URL :
+        <code class="text-gray-400">https://api.diet-vision.com/api/v1/payments/webhook</code>
+      </p>
+      <div class="space-y-4">
+        <% %w[stripe_publishable_key stripe_secret_key stripe_webhook_secret].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <% val = cfg[:value].to_s %>
+          <% masked = val.present? ? (val[0..9] + "••••••••" + val[-4..]) : nil %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+
+            <%# Affichage valeur actuelle %>
+            <% if val.present? %>
+              <div id="display-<%= key %>" class="flex items-center gap-3 mb-2">
+                <span class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-mono text-gray-300 truncate">
+                  <%= masked %>
+                </span>
+                <span class="text-xs font-semibold shrink-0" style="color:#C8FF00">✓ Défini</span>
+                <button type="button" onclick="editStripeKey('<%= key %>')"
+                        class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg cursor-pointer transition-colors">
+                  ✏️ Modifier
+                </button>
+              </div>
+            <% end %>
+
+            <%# Champ de saisie (caché si déjà défini, visible si vide ou en édition) %>
+            <div id="edit-<%= key %>" class="<%= val.present? ? 'hidden' : '' %>">
+              <div class="flex gap-2">
+                <input type="text" id="input-<%= key %>" name="configs[<%= key %>]"
+                       autocomplete="off"
+                       placeholder="<%= key == 'stripe_secret_key' ? 'sk_live_...' : key == 'stripe_publishable_key' ? 'pk_live_...' : 'whsec_...' %>"
+                       class="flex-1 px-3 py-2.5 bg-gray-800 border border-blue-600 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-blue-400">
+                <% if val.present? %>
+                  <button type="button" onclick="cancelEditKey('<%= key %>')"
+                          class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg cursor-pointer">
+                    Annuler
+                  </button>
+                <% end %>
+              </div>
+              <p class="text-xs text-gray-600 mt-1">Laissez vide pour conserver la valeur actuelle.</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── Période d'essai ────────────────────────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Période d'essai</h2>
+      <div class="space-y-4">
+        <%# trial_enabled %>
+        <% cfg_trial_enabled = @configs.find { |c| c[:key] == "trial_enabled" } %>
+        <% if cfg_trial_enabled %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg_trial_enabled[:description] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-3">trial_enabled</div>
+            <div class="flex items-center gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="configs[trial_enabled]" value="1"
+                       <%= cfg_trial_enabled[:value].to_s.in?(%w[1 true yes]) ? "checked" : "" %>
+                       class="accent-[#C8FF00]">
+                <span class="text-sm text-white">✅ Activé</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="configs[trial_enabled]" value="0"
+                       <%= !cfg_trial_enabled[:value].to_s.in?(%w[1 true yes]) ? "checked" : "" %>
+                       class="accent-[#C8FF00]">
+                <span class="text-sm text-gray-400">❌ Désactivé</span>
+              </label>
+            </div>
+          </div>
+        <% end %>
+
+        <%# trial_period_days %>
+        <% cfg_trial_days = @configs.find { |c| c[:key] == "trial_period_days" } %>
+        <% if cfg_trial_days %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg_trial_days[:description] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5">trial_period_days</div>
+            <div class="flex items-center gap-3">
+              <input type="number" name="configs[trial_period_days]" min="1" max="365"
+                     value="<%= cfg_trial_days[:value].presence || 7 %>"
+                     class="w-32 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white font-mono">
+              <span class="text-sm text-gray-500">jours</span>
+            </div>
+            <p class="text-xs text-gray-600 mt-2">
+              Recommandé : 7 à 14 jours. La période démarre automatiquement à l'inscription.
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── App ───────────────────────────────────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Application</h2>
+      <div class="space-y-4">
+        <% %w[app_name support_email].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+            <input type="text" name="configs[<%= key %>]"
+                   value="<%= cfg[:value] %>"
+                   class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono">
+          </div>
+        <% end %>
+      </div>
+    </div>
 
     <div class="flex items-center gap-4 pt-2">
       <%= f.submit "💾 Sauvegarder la configuration",
             class: "px-6 py-2.5 btn-primary rounded-lg text-sm cursor-pointer transition-colors" %>
-
-      <button type="button" id="test-btn" onclick="testOpenRouter()"
-              class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm rounded-lg cursor-pointer transition-colors">
-        Tester la connexion
-      </button>
-
-      <span id="test-result" class="text-sm" style="color:#9ca3af"></span>
     </div>
   <% end %>
 </div>
 
 <script>
-async function testOpenRouter() {
-  const btn = document.getElementById('test-btn')
-  const result = document.getElementById('test-result')
-  btn.disabled = true
-  result.textContent = 'Test en cours…'
-  result.style.color = '#9ca3af'
+// ── Helpers clé/annuler ───────────────────────────────────────────────────────
+function editStripeKey(key) {
+  document.getElementById('display-' + key).classList.add('hidden');
+  document.getElementById('edit-' + key).classList.remove('hidden');
+  document.getElementById('input-' + key).focus();
+}
+function cancelEditKey(key) {
+  document.getElementById('display-' + key).classList.remove('hidden');
+  document.getElementById('edit-' + key).classList.add('hidden');
+  document.getElementById('input-' + key).value = '';
+}
 
+// ── Tests API ─────────────────────────────────────────────────────────────────
+const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+const ENDPOINTS = {
+  openrouter: '<%= admin_test_openrouter_path %>',
+  stripe:     '<%= admin_test_stripe_path %>',
+  resend:     '<%= admin_test_resend_path %>',
+  api:        '<%= admin_test_api_path %>'
+};
+
+function setCardState(service, state, message) {
+  const card = document.getElementById('card-' + service);
+  const dot  = card.querySelector('.status-dot');
+  const res  = card.querySelector('.test-result');
+  const btn  = card.querySelector('.test-btn');
+
+  // Reset classes
+  dot.className  = 'status-dot w-2.5 h-2.5 rounded-full flex-shrink-0';
+  card.className = card.className.replace(/border-\S+/g, '').trim();
+
+  if (state === 'loading') {
+    dot.classList.add('bg-yellow-400', 'animate-pulse');
+    res.innerHTML = '<span class="text-yellow-400">⏳ Test en cours…</span>';
+    btn.disabled  = true;
+    btn.textContent = '…';
+    card.classList.add('border-yellow-800');
+  } else if (state === 'ok') {
+    dot.classList.add('bg-[#C8FF00]');
+    res.innerHTML = '<span style="color:#C8FF00">✓ ' + message + '</span>';
+    btn.disabled  = false;
+    btn.textContent = 'Re-tester';
+    card.classList.add('border-green-800');
+  } else {
+    dot.classList.add('bg-red-500');
+    res.innerHTML = '<span class="text-red-400">✗ ' + message + '</span>';
+    btn.disabled  = false;
+    btn.textContent = 'Re-tester';
+    card.classList.add('border-red-900');
+  }
+}
+
+async function testService(service) {
+  setCardState(service, 'loading');
   try {
-    const res = await fetch('<%= admin_test_openrouter_path %>', {
-      headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
-    })
-    const data = await res.json()
+    const res  = await fetch(ENDPOINTS[service], { headers: { 'X-CSRF-Token': CSRF() } });
+    const data = await res.json();
+
     if (data.ok) {
-      result.textContent = '✓ Connexion OK — ' + data.models.slice(0, 3).join(', ')
-      result.style.color = '#C8FF00'
+      let msg = '';
+      if (service === 'openrouter') msg = data.total + ' modèles disponibles';
+      else if (service === 'stripe') msg = data.mode + (data.available ? ' — solde: ' + data.available : '');
+      else if (service === 'resend') msg = 'Domaines: ' + data.domains;
+      else if (service === 'api') {
+        const ep = data.endpoints || {};
+        const parts = [];
+        if (ep.health?.ok) parts.push('health ✓');
+        if (ep.plans?.ok)  parts.push('plans (' + (ep.plans.count || 0) + ') ✓');
+        if (ep.rgpd?.ok)   parts.push('rgpd ✓');
+        msg = parts.join(' · ') + ' — ' + data.duration_ms + 'ms';
+      }
+      setCardState(service, 'ok', msg);
     } else {
-      result.textContent = '✗ ' + data.error
-      result.style.color = '#f87171'
+      setCardState(service, 'error', data.error || 'Erreur inconnue');
     }
   } catch (e) {
-    result.textContent = '✗ Erreur réseau'
-    result.style.color = '#f87171'
+    setCardState(service, 'error', 'Réseau: ' + e.message);
   }
-  btn.disabled = false
+}
+
+async function runAllTests() {
+  const btn = document.getElementById('btn-all');
+  btn.disabled = true;
+  btn.textContent = '⏳ Tests en cours…';
+
+  await Promise.all(['openrouter','stripe','resend','api'].map(s => testService(s)));
+
+  const now = new Date().toLocaleTimeString('fr-FR');
+  document.getElementById('last-check').textContent = now;
+  document.getElementById('global-status').classList.remove('hidden');
+  btn.disabled = false;
+  btn.textContent = '▶ Tout tester';
 }
 </script>
