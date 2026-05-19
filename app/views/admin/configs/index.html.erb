@@ -186,8 +186,8 @@
             <%# Champ de saisie (caché si déjà défini, visible si vide ou en édition) %>
             <div id="edit-<%= key %>" class="<%= val.present? ? 'hidden' : '' %>">
               <div class="flex gap-2">
-                <input type="text" id="input-<%= key %>" name="configs[<%= key %>]"
-                       autocomplete="off"
+                <input type="password" id="input-<%= key %>" name="configs[<%= key %>]"
+                       autocomplete="new-password"
                        placeholder="<%= key == 'stripe_secret_key' ? 'sk_live_...' : key == 'stripe_publishable_key' ? 'pk_live_...' : 'whsec_...' %>"
                        class="flex-1 px-3 py-2.5 bg-gray-800 border border-blue-600 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-blue-400">
                 <% if val.present? %>

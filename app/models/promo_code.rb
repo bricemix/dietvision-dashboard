@@ -35,9 +35,13 @@ class PromoCode < ApplicationRecord
       (max_uses_total.nil? || uses_count < max_uses_total)
   end
 
+  # BUG-14 FIXÉ : with_lock pour éviter la race condition sur uses_count
+  # Sans verrou, deux requêtes simultanées pouvaient dépasser max_uses_total.
   def increment_usage!
-    increment!(:uses_count)
-    update_column(:status, "expired") if max_uses_total && uses_count >= max_uses_total
+    with_lock do
+      increment!(:uses_count)
+      update_column(:status, "expired") if max_uses_total && uses_count >= max_uses_total
+    end
   end
 
   # ── Display ──────────────────────────────────────────────────

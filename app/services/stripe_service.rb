@@ -193,9 +193,21 @@ class StripeService
     user = User.find_by(id: user_id)
     return log_warn("checkout.completed : user #{user_id} introuvable") unless user
 
-    subscription = user.subscriptions.where(status: "pending")
-                       .order(created_at: :desc).first
+    # BUG-08 : valider que la session Stripe appartient bien au customer de cet utilisateur.
+    # Empêche l'activation frauduleuse si les métadonnées sont altérées.
+    if user.stripe_customer_id.present? && session.customer != user.stripe_customer_id
+      return log_warn("checkout.completed : customer Stripe #{session.customer} != user #{user.id} (#{user.stripe_customer_id}) — FRAUDE POSSIBLE")
+    end
+
+    # BUG-08 : chercher d'abord par provider_ref (session_id) pour éviter les collisions
+    # entre plusieurs abonnements pending du même utilisateur.
+    subscription = Payment.find_by(provider_ref: session.id)&.subscription ||
+                   user.subscriptions.where(status: "pending")
+                        .order(created_at: :desc).first
     return log_warn("checkout.completed : aucun abonnement pending pour user #{user_id}") unless subscription
+
+    # Double-vérification que la subscription appartient bien à cet utilisateur
+    return log_warn("checkout.completed : subscription #{subscription.id} n'appartient pas à user #{user_id}") unless subscription.user_id == user.id
 
     # Stocker le stripe_subscription_id → indispensable pour les futurs webhooks
     subscription.update_columns(stripe_subscription_id: stripe_subscription_id) if stripe_subscription_id.present?
@@ -349,13 +361,16 @@ class StripeService
       : stripe_sub.items.data.first.current_period_start
   end
 
-  # monthly → ["month", 1] | quarterly → ["month", 3] | yearly → ["year", 1]
+  # monthly → ["month", 1] | quarterly → ["month", 3] | semi_annual → ["month", 6] | yearly → ["year", 1]
   def stripe_interval(billing_frequency)
     case billing_frequency
-    when "monthly"   then ["month", 1]
-    when "quarterly" then ["month", 3]
-    when "yearly"    then ["year",  1]
-    else                  ["month", 1]
+    when "monthly"    then ["month", 1]
+    when "quarterly"  then ["month", 3]
+    when "semi_annual" then ["month", 6]  # BUG FIXÉ : était traité comme mensuel (fallback else)
+    when "yearly"     then ["year",  1]
+    else
+      Rails.logger.warn("[StripeService] billing_frequency inconnu : #{billing_frequency.inspect} — fallback mensuel")
+      ["month", 1]
     end
   end
 end

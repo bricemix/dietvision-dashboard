@@ -77,25 +77,38 @@ class User < ApplicationRecord
     email_verified_at.present?
   end
 
-  # Génère un code à 6 chiffres, le sauvegarde, retourne le code
+  # Génère un code à 6 chiffres cryptographiquement sûr, le sauvegarde, retourne le code
   def generate_verification_code!
-    code = rand(100_000..999_999).to_s
+    code = (SecureRandom.random_number(900_000) + 100_000).to_s
     update!(
-      email_verification_code:    code,
-      email_verification_sent_at: Time.current
+      email_verification_code:         code,
+      email_verification_sent_at:      Time.current,
+      email_verification_attempts:     0
     )
     code
   end
 
-  # Vérifie le code saisi — true si valide (code correct + < 15 min)
+  # Vérifie le code saisi — true si valide (code correct + < 15 min + < 5 tentatives)
+  # Utilise secure_compare pour éviter les timing attacks.
   def verify_email!(code)
     return false if email_verification_code.blank?
     return false if email_verification_sent_at.nil? || email_verification_sent_at < 15.minutes.ago
-    return false if email_verification_code != code.to_s.strip
+    # Bloquer après 5 tentatives échouées
+    if (email_verification_attempts || 0) >= 5
+      update_column(:email_verification_code, nil) # invalider le code après trop d'échecs
+      return false
+    end
+    unless ActiveSupport::SecurityUtils.secure_compare(
+             email_verification_code.to_s, code.to_s.strip
+           )
+      increment!(:email_verification_attempts)
+      return false
+    end
     update!(
-      email_verified_at:          Time.current,
-      email_verification_code:    nil,
-      email_verification_sent_at: nil
+      email_verified_at:               Time.current,
+      email_verification_code:         nil,
+      email_verification_sent_at:      nil,
+      email_verification_attempts:     0
     )
     true
   end
@@ -106,25 +119,41 @@ class User < ApplicationRecord
 
   # ── Password reset ────────────────────────────────────────────
 
-  # Génère un code à 6 chiffres valable 1h, le sauvegarde et le retourne
+  # Génère un token cryptographiquement sûr valable 1h, le sauvegarde et le retourne
   def generate_password_reset_token!
-    token = rand(100_000..999_999).to_s
+    token = SecureRandom.hex(32)
     update_columns(
-      password_reset_token:   token,
-      password_reset_sent_at: Time.current
+      password_reset_token:    token,
+      password_reset_sent_at:  Time.current,
+      password_reset_attempts: 0
     )
     token
   end
 
-  # Réinitialise le mot de passe si le code est valide (< 1h)
+  # Réinitialise le mot de passe si le token est valide (< 1h, < 3 tentatives)
+  # Utilise secure_compare pour éviter les timing attacks.
   # Retourne true si succès, false sinon
   def reset_password_with_token!(token, new_password)
     return false if password_reset_token.blank?
     return false if password_reset_sent_at.nil? || password_reset_sent_at < 1.hour.ago
-    return false if password_reset_token != token.to_s.strip
+    # Bloquer après 3 tentatives (burn-after-read partiel)
+    if (password_reset_attempts || 0) >= 3
+      update_columns(password_reset_token: nil, password_reset_sent_at: nil)
+      return false
+    end
+    unless ActiveSupport::SecurityUtils.secure_compare(
+             password_reset_token.to_s, token.to_s.strip
+           )
+      increment!(:password_reset_attempts)
+      return false
+    end
     self.password = new_password
     if save
-      update_columns(password_reset_token: nil, password_reset_sent_at: nil)
+      update_columns(
+        password_reset_token:    nil,
+        password_reset_sent_at:  nil,
+        password_reset_attempts: 0
+      )
       true
     else
       false

@@ -71,14 +71,35 @@ module Admin
       parsed.reverse
     end
 
-    # Lit les N dernières lignes sans charger tout le fichier en mémoire.
-    # Lecture en binaire puis conversion UTF-8 pour éviter les erreurs
-    # sur les requêtes HTTP malformées contenues dans puma.log.
+    # Lit les N dernières lignes en remontant depuis la fin du fichier.
+    # BUG-11 FIXÉ : ancienne version faisait File.binread(path) → charge tout le fichier en RAM.
+    # Nouvelle version lit des chunks depuis la fin (O(chunk_size) en RAM, pas O(file_size)).
+    CHUNK_SIZE = 512.kilobytes
+
     def tail_file(path, n)
-      raw = File.binread(path)
-      # Forcer l'encodage UTF-8 en remplaçant les séquences invalides
-      safe = raw.encode("UTF-8", "binary", invalid: :replace, undef: :replace, replace: "?")
-      safe.lines.last(n)
+      File.open(path, "rb") do |f|
+        size     = f.size
+        return [] if size == 0
+
+        buffer   = +""
+        offset   = size
+        lines    = []
+
+        while lines.size < n && offset > 0
+          read_size = [ CHUNK_SIZE, offset ].min
+          offset   -= read_size
+          f.seek(offset)
+          chunk = f.read(read_size)
+          # Forcer UTF-8 pour éviter les erreurs sur requêtes HTTP malformées
+          chunk = chunk.encode("UTF-8", "binary", invalid: :replace, undef: :replace, replace: "?")
+          buffer = chunk + buffer
+          lines  = buffer.lines
+          # Supprimer la première ligne (potentiellement tronquée) si on n'est pas au début
+          lines.shift if offset > 0 && lines.size > 1
+        end
+
+        lines.last(n)
+      end
     rescue => e
       Rails.logger.error("ServerLogsController#tail_file error: #{e.message}")
       []

@@ -36,6 +36,8 @@ Rails.application.routes.draw do
 
       # Paiements (Stripe)
       post   "payments/subscribe",              to: "payments#subscribe"
+      post   "payments/verify",                 to: "payments#verify"
+      get    "payments/webhook-status",         to: "payments#webhook_status"
       get    "payments/status/:transaction_id", to: "payments#status", as: :payment_status
       post   "payments/webhook",               to: "payments#webhook", as: :payments_webhook
       get    "payments",                       to: "payments#index"

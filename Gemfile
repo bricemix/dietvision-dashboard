@@ -32,6 +32,9 @@ gem "groupdate"
 # CORS (mobile app)
 gem "rack-cors"
 
+# Rate limiting & brute-force protection
+gem "rack-attack"
+
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "solid_cache"
 gem "solid_queue"

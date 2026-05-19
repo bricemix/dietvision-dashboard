@@ -35,10 +35,12 @@ module Admin
           @user.update!(subscription_expires_at: Time.current + days.days)
         end
 
-        # Période d'essai
+        # Période d'essai — checkbox admin OU config globale si non premium
         if params.dig(:user, :start_trial) == "1"
           trial_days = params.dig(:user, :trial_days).to_i.clamp(1, 90)
           @user.start_trial!(trial_days)
+        elsif @user.plan != "premium" && AppConfig.trial_enabled? && AppConfig.trial_period_days > 0 && !@user.had_trial
+          @user.start_trial!(AppConfig.trial_period_days)
         end
 
         AdminLog.log(admin: current_admin, action: "create_user", resource: @user,
@@ -56,7 +58,7 @@ module Admin
     def show
       @user          = User.find(params[:id])
       @subscriptions = @user.subscriptions.order(created_at: :desc)
-      @api_usages    = ApiUsage.where(user: @user).order(created_at: :desc).limit(200)
+      @api_usages    = ApiUsage.where(user: @user).order(created_at: :desc).limit(50)  # BUG-10 : réduit de 200 à 50
       @all_payments  = @user.payments.order(created_at: :desc)
       @fitai_profile = begin; JSON.parse(@user.fitai_profile || '{}'); rescue; {}; end
       @body_entries  = begin; JSON.parse(@user.body_entries_data || '[]'); rescue; []; end

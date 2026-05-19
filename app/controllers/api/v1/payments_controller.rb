@@ -85,6 +85,87 @@ module Api
         head :internal_server_error
       end
 
+      # POST /api/v1/payments/verify
+      # Body: { session_id: "cs_xxx" }
+      # Vérifie auprès de Stripe que la session est bien payée.
+      # Si le webhook n'a pas encore activé le plan, le fait en fallback.
+      # Retourne : { paid, plan, webhook_received, invoice_sent, email_sent, user? }
+      def verify
+        session_id = params[:session_id].to_s.strip
+        return render json: { error: "session_id requis" }, status: :bad_request if session_id.blank?
+
+        service = StripeService.new
+
+        # 1. Récupérer la session Stripe
+        stripe_session = Stripe::Checkout::Session.retrieve(
+          { id: session_id, expand: ["subscription", "subscription.latest_invoice"] }
+        )
+        paid = stripe_session.payment_status == "paid"
+
+        unless paid
+          return render json: {
+            paid:             false,
+            plan:             current_user.plan,
+            webhook_received: false,
+            invoice_sent:     false,
+            email_sent:       false
+          }
+        end
+
+        # 2. Vérifier si le webhook a déjà traité ce paiement
+        # On cherche uniquement par provider_ref (session_id) pour éviter les faux positifs.
+        # IMPORTANT : le fallback d'activation manuelle a été supprimé — seul le webhook
+        # Stripe signé (POST /api/v1/payments/webhook) peut activer un abonnement.
+        # Cela empêche toute activation frauduleuse via cet endpoint.
+        payment = current_user.payments.find_by(provider_ref: session_id)
+        webhook_received = payment&.status == "success"
+
+        # 3. Réponse
+        render json: {
+          paid:             true,
+          plan:             current_user.plan,
+          webhook_received: webhook_received,
+          invoice_sent:     true,   # Stripe envoie la facture automatiquement
+          email_sent:       false,  # pas d'email supplémentaire ici
+          user:             user_json(current_user)
+        }
+
+      rescue Stripe::InvalidRequestError => e
+        render json: { error: "Session Stripe introuvable : #{e.message}" }, status: :not_found
+      rescue Stripe::StripeError => e
+        render json: { error: e.message }, status: :unprocessable_entity
+      rescue => e
+        Rails.logger.error("Payments#verify error: #{e.message}")
+        render json: { error: "Erreur serveur" }, status: :internal_server_error
+      end
+
+      # GET /api/v1/payments/webhook-status?session_id=cs_xxx
+      # Permet au client de poller pour savoir si le webhook a été traité.
+      # Retourne : { received, processed, plan, received_at }
+      def webhook_status
+        session_id = params[:session_id].to_s.strip
+        return render json: { error: "session_id requis" }, status: :bad_request if session_id.blank?
+
+        # Chercher d'abord le paiement par provider_ref (session_id stocké lors du subscribe)
+        payment = current_user.payments.find_by(provider_ref: session_id)
+
+        if payment.nil?
+          return render json: {
+            received:  false,
+            processed: false,
+            plan:      current_user.plan
+          }
+        end
+
+        processed = payment.status == "success"
+        render json: {
+          received:    true,
+          processed:   processed,
+          plan:        current_user.plan,
+          received_at: payment.updated_at
+        }
+      end
+
       # GET /api/v1/payments
       def index
         payments = current_user.payments.order(created_at: :desc).limit(20)
@@ -99,6 +180,24 @@ module Api
             paid_at:        p.paid_at,
             created_at:     p.created_at
           }
+        }
+      end
+
+      private
+
+      def user_json(user)
+        {
+          id:                      user.id,
+          name:                    user.name,
+          email:                   user.email,
+          plan:                    user.plan,
+          subscription_plan:       user.plan,
+          subscription_expires_at: user.subscription_expires_at,
+          premium:                 user.premium?,
+          trial_ends_at:           user.trial_ends_at,
+          in_trial:                user.in_trial?,
+          trial_days_remaining:    user.trial_days_remaining,
+          email_verified:          user.email_verified?
         }
       end
     end

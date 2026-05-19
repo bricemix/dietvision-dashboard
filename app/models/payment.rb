@@ -4,7 +4,7 @@ class Payment < ApplicationRecord
 
   before_create :generate_transaction_id
 
-  validates :amount,   numericality: { greater_than: 0 }
+  validates :amount,   numericality: { greater_than: 0, only_integer: true }  # BUG-13 : montant en centimes = entier
   validates :provider, inclusion: { in: %w[stripe cinetpay mtn orange wave mvola orange_money airtel_money] }
   validates :status,   inclusion: { in: %w[pending success failed refunded] }
 

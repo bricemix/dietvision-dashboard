@@ -11,11 +11,25 @@ module Admin
     def create
       admin = AdminUser.find_by(email: params[:email]&.downcase)
 
+      # Vérifier le lockout avant tout (BUG-07)
+      if admin&.locked?
+        minutes_left = ((admin.locked_until - Time.current) / 60).ceil
+        flash.now[:alert] = "Compte temporairement verrouillé. Réessayez dans #{minutes_left} min."
+        return render :new, status: :unprocessable_entity
+      end
+
       if admin&.authenticate(params[:password])
+        admin.record_successful_login!
         session[:admin_id] = admin.id
-        admin.update_column(:last_login_at, Time.current)
+        AdminLog.log(admin: admin, action: "login_success",
+                     details: { email: admin.email }, ip: request.remote_ip) rescue nil
         redirect_to admin_dashboard_path, notice: "Bienvenue, #{admin.name} !"
       else
+        # BUG-15 : logger les échecs + incrémenter le compteur
+        admin&.record_failed_login!
+        AdminLog.log(admin: nil, action: "login_failed",
+                     details: { email: params[:email].to_s.first(100) },
+                     ip: request.remote_ip) rescue nil
         flash.now[:alert] = "Email ou mot de passe incorrect"
         render :new, status: :unprocessable_entity
       end
