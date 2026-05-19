@@ -181,14 +181,14 @@ module Admin
     def payments_to_csv(payments)
       require "csv"
       CSV.generate(headers: true, col_sep: ";", encoding: "UTF-8") do |csv|
-        csv << %w[ID Date Utilisateur Email Montant_Ar Operateur Statut Transaction_ID Telephone Plan]
+        csv << %w[ID Date Utilisateur Email Montant_USD Operateur Statut Transaction_ID Telephone Plan]
         payments.each do |p|
           csv << [
             p.id,
             p.created_at.strftime("%d/%m/%Y %H:%M"),
             p.user&.name,
             p.user&.email,
-            p.amount.to_i,
+            ("%.2f" % (p.amount.to_i / 100.0)),
             operator_label(p.provider),
             p.status,
             p.transaction_id,

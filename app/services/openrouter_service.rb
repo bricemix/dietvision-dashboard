@@ -63,7 +63,7 @@ class OpenrouterService
   end
 
   # Coach IA — messages est un array [{role:, content:}]
-  def coach_chat(messages, profile:, model: nil, locale: "fr")
+  def coach_chat(messages, profile:, model: nil, locale: "fr", max_tokens: nil)
     model ||= AppConfig.default_model
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
@@ -74,7 +74,7 @@ class OpenrouterService
 
     payload = {
       model: model,
-      max_tokens: 400,
+      max_tokens: max_tokens || 400,
       messages: [ system_msg ] + messages
     }
 

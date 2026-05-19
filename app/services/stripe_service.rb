@@ -254,7 +254,16 @@ class StripeService
     # SÉPARÉ du paiement pour que l'activation ne soit jamais bloquée par
     # une erreur d'enregistrement comptable (validation, contrainte DB…).
     ActiveRecord::Base.transaction do
-      starts_at = stripe_sub ? Time.at(period_start(stripe_sub)).utc : Time.current
+      # period_start peut lever une exception sur certaines versions de l'API Stripe
+      # (current_period_start absent de la racine) → on l'encapsule pour ne pas
+      # faire rollback toute la transaction à cause d'une donnée accessoire.
+      starts_at = begin
+        stripe_sub ? Time.at(period_start(stripe_sub)).utc : Time.current
+      rescue => e
+        Rails.logger.warn("[StripeService] period_start échoué (#{e.message}) — starts_at = now")
+        Time.current
+      end
+
       subscription.update!(
         stripe_subscription_id: stripe_subscription_id,
         status:     "active",
@@ -263,7 +272,8 @@ class StripeService
       )
       user.update!(
         plan:                    plan_level,
-        subscription_expires_at: expires_at
+        subscription_expires_at: expires_at,
+        trial_ends_at:           nil   # Souscription active → fin de l'essai Starter
       )
     end
 
@@ -346,39 +356,59 @@ class StripeService
   end
 
   # ── customer.subscription.updated ────────────────────────────────────────────
-  # Changement de plan, pause, reprise… On synchronise expires_at et le statut.
+  # Changement de plan, pause, reprise… On synchronise expires_at, le statut
+  # ET le plan utilisateur (cas où invoice.paid n'a pas encore été traité).
 
   def handle_subscription_updated(event)
     stripe_sub   = event.data.object
     subscription = Subscription.find_by(stripe_subscription_id: stripe_sub.id)
     return unless subscription
 
-    expires_at = Time.at(period_end(stripe_sub)).utc
+    expires_at = begin
+      Time.at(period_end(stripe_sub)).utc
+    rescue => e
+      Rails.logger.warn("[StripeService] period_end échoué dans subscription.updated (#{e.message}) — expires_at inchangé")
+      subscription.expires_at || Time.current + 1.month
+    end
     status_map = { "active" => "active", "past_due" => "past_due", "canceled" => "cancelled" }
     new_status = status_map[stripe_sub.status] || subscription.status
 
     subscription.update!(status: new_status, expires_at: expires_at)
-    subscription.user.update!(subscription_expires_at: expires_at)
 
-    Rails.logger.info("Stripe subscription.updated : #{subscription.user.email} → #{new_status} until #{expires_at.strftime('%d/%m/%Y')}")
+    # Mettre à jour le plan utilisateur quand la subscription devient active.
+    # Cela couvre le cas où customer.subscription.updated arrive AVANT invoice.paid
+    # (ordre des webhooks Stripe non garanti), évitant que user.plan reste "free".
+    user_attrs = { subscription_expires_at: expires_at }
+    if new_status == "active"
+      user_attrs[:plan]          = plan_level_from_subscription(subscription)
+      user_attrs[:trial_ends_at] = nil   # Souscription active → fin de l'essai Starter
+    end
+    subscription.user.update!(user_attrs)
+
+    Rails.logger.info("Stripe subscription.updated : #{subscription.user.email} → #{new_status} (#{user_attrs[:plan] || 'plan inchangé'}) until #{expires_at.strftime('%d/%m/%Y')}")
   end
 
   def log_warn(msg)
     Rails.logger.warn("[StripeService] #{msg}")
   end
 
-  # Retourne le niveau de plan ("starter" | "pro" | "premium") à partir du slug
-  # de la Subscription locale (ex: "pro", "starter", "premium-annual" → "premium")
+  # Retourne le niveau de plan normalisé ("starter" | "pro" | "premium")
+  # à partir du slug de la Subscription locale.
+  # Gère tous les formats : "premium", "premium_12m", "premium-annual",
+  #                         "starter", "starter_12m", "pro", "pro-monthly", etc.
   def plan_level_from_subscription(subscription)
     slug = subscription.plan.to_s.downcase
-    case slug
-    when "starter"                      then "starter"
-    when "pro"                          then "pro"
-    when /premium/                      then "premium"
+    # Correspondance par préfixe (avant _ ou -) — ordre : du plus spécifique au moins
+    return "premium" if slug.match?(/\Apremium/) || slug.include?("premium")
+    return "pro"     if slug.match?(/\Apro[_\-]?/) || slug == "pro"
+    return "starter" if slug.match?(/\Astarter/)
+    # Fallback : chercher le plan Rails et extraire le préfixe avant _ ou -
+    plan = Plan.find_by(slug: slug)
+    if plan
+      plan.slug.gsub(/[_\-].*\z/, "")   # "starter_12m" → "starter", "premium-annual" → "premium"
     else
-      # Fallback : lire le plan Rails via stripe_price_id
-      plan = Plan.find_by(slug: slug)
-      plan ? plan.slug.gsub(/-.*/, "") : "premium"
+      Rails.logger.warn("[StripeService] plan_level_from_subscription: slug inconnu '#{slug}' → fallback premium")
+      "premium"
     end
   end
 

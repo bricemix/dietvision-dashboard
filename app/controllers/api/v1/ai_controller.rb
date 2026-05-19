@@ -26,10 +26,12 @@ module Api
         messages = params[:messages]
         return render json: { error: "Messages manquants" }, status: :bad_request if messages.blank?
 
-        profile = params[:profile] || {}
-        locale  = sanitize_locale(params[:locale])
-        service = OpenrouterService.new(user: current_user)
-        result  = service.coach_chat(messages, profile: profile, model: params[:model], locale: locale)
+        profile    = params[:profile] || {}
+        locale     = sanitize_locale(params[:locale])
+        max_tokens = params[:max_tokens].to_i.clamp(100, 2000).then { |v| v > 0 ? v : nil }
+        service    = OpenrouterService.new(user: current_user)
+        result     = service.coach_chat(messages, profile: profile, model: params[:model],
+                                        locale: locale, max_tokens: max_tokens)
 
         if result[:error]
           render json: result, status: :unprocessable_entity

@@ -145,15 +145,22 @@ module Api
                       provider_response: stripe_session.to_json
                     )
                   end
+                  # current_period_start peut être absent de la racine selon la version API Stripe
+                  starts_at = begin
+                    Time.at(stripe_sub.current_period_start).utc
+                  rescue
+                    Time.current
+                  end
                   subscription.update!(
                     stripe_subscription_id: stripe_subscription_id,
                     status:     "active",
-                    starts_at:  Time.at(stripe_sub.current_period_start).utc,
+                    starts_at:  starts_at,
                     expires_at: expires_at
                   )
                   current_user.update!(
                     plan:                    plan_level,
-                    subscription_expires_at: expires_at
+                    subscription_expires_at: expires_at,
+                    trial_ends_at:           nil   # Souscription active → fin de l'essai Starter
                   )
                 end
                 webhook_received = true
@@ -232,6 +239,13 @@ module Api
       private
 
       def user_json(user)
+        # La période d'essai ne s'applique qu'au plan Starter.
+        trial_eligible = user.plan.to_s.match?(/\A(free|starter)\z/i)
+
+        active = user.premium? ||
+                 user.active_subscription.present? ||
+                 (trial_eligible && user.in_trial?)
+
         {
           id:                      user.id,
           name:                    user.name,
@@ -240,9 +254,10 @@ module Api
           subscription_plan:       user.plan,
           subscription_expires_at: user.subscription_expires_at,
           premium:                 user.premium?,
-          trial_ends_at:           user.trial_ends_at,
-          in_trial:                user.in_trial?,
-          trial_days_remaining:    user.trial_days_remaining,
+          is_active:               active,
+          trial_ends_at:           trial_eligible ? user.trial_ends_at : nil,
+          in_trial:                trial_eligible && user.in_trial?,
+          trial_days_remaining:    trial_eligible ? user.trial_days_remaining : 0,
           email_verified:          user.email_verified?
         }
       end

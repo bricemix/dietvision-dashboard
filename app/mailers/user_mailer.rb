@@ -27,13 +27,13 @@ class UserMailer < ApplicationMailer
     )
   end
 
-  # Code de réinitialisation de mot de passe
+  # Code de réinitialisation de mot de passe (code 6 chiffres, valable 3 min)
   def password_reset(user, token)
     @user  = user
     @token = token
     mail(
       to:      "#{user.name} <#{user.email}>",
-      subject: "#{token} — Réinitialisez votre mot de passe DietVision"
+      subject: "#{token} est votre code DietVision"
     )
   end
 

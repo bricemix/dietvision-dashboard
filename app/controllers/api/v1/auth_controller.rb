@@ -135,6 +135,15 @@ module Api
       end
 
       def user_json(user)
+        # La période d'essai ne s'applique qu'au plan Starter.
+        # Pro et Premium : pas de trial — souscription payante directe uniquement.
+        trial_eligible = user.plan.to_s.match?(/\A(free|starter)\z/i)
+
+        # is_active : vrai si abonnement payant actif OU en période d'essai Starter
+        active = user.premium? ||
+                 user.active_subscription.present? ||
+                 (trial_eligible && user.in_trial?)
+
         {
           id:                      user.id,
           name:                    user.name,
@@ -145,9 +154,10 @@ module Api
           subscription_plan:       user.plan,
           subscription_expires_at: user.subscription_expires_at,
           premium:                 user.premium?,
-          trial_ends_at:           user.trial_ends_at,
-          in_trial:                user.in_trial?,
-          trial_days_remaining:    user.trial_days_remaining,
+          is_active:               active,
+          trial_ends_at:           trial_eligible ? user.trial_ends_at : nil,
+          in_trial:                trial_eligible && user.in_trial?,
+          trial_days_remaining:    trial_eligible ? user.trial_days_remaining : 0,
           email_verified:          user.email_verified?
         }
       end

@@ -16,19 +16,18 @@ module ApplicationHelper
     content_tag :span, status.to_s, class: "badge badge-#{status}"
   end
 
-  # Formatage montant XOF
-  def format_xof(amount)
-    parts = amount.to_i.to_s.chars.reverse.each_slice(3).map(&:join).join(" ").reverse
-    "#{parts} XOF"
+  # Formatage montant en dollars (centimes → $)
+  # Les montants sont stockés en centimes entiers (ex: 999 = $9.99)
+  def format_dollars(amount)
+    dollars = amount.to_i / 100.0
+    "$#{"%.2f" % dollars}"
   end
 
-  # Formatage montant Ariary
-  def format_ariary(amount)
-    parts = amount.to_i.to_s.chars.reverse.each_slice(3).map(&:join).join(" ").reverse
-    "#{parts} Ar"
-  end
+  # Alias pour compatibilité avec les vues existantes
+  alias_method :format_ariary, :format_dollars
+  alias_method :format_xof,    :format_dollars
 
-  # Formatage coût USD
+  # Formatage coût USD précis (pour les logs de coût API, 4 décimales)
   def format_usd(amount)
     "$#{"%.4f" % amount.to_f}"
   end

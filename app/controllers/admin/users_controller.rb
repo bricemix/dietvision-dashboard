@@ -111,6 +111,38 @@ module Admin
       redirect_to admin_user_path(@user), notice: "Accès premium offert pour #{days} jours"
     end
 
+    # ── Suppression d'un compte utilisateur ──────────────────────
+    # Mot de passe requis : "dietvision"
+    def destroy
+      unless params[:confirm_password] == "dietvision"
+        return redirect_to admin_user_path(params[:id]),
+                           alert: "Mot de passe incorrect — suppression annulée."
+      end
+      @user = User.find(params[:id])
+      email = @user.email
+      name  = @user.name
+      @user.destroy!
+      AdminLog.log(admin: current_admin, action: "delete_user",
+                   details: { email: email, name: name }, ip: request.remote_ip)
+      redirect_to admin_users_path,
+                  notice: "Compte de #{name} (#{email}) supprimé définitivement."
+    end
+
+    # ── Suppression de TOUS les utilisateurs ─────────────────────
+    # Mot de passe requis : "dietvision"
+    def destroy_all
+      unless params[:confirm_password] == "dietvision"
+        return redirect_to admin_users_path,
+                           alert: "Mot de passe incorrect — suppression annulée."
+      end
+      count = User.count
+      User.destroy_all
+      AdminLog.log(admin: current_admin, action: "delete_all_users",
+                   details: { count: count }, ip: request.remote_ip)
+      redirect_to admin_users_path,
+                  notice: "#{count} compte(s) utilisateur(s) supprimé(s) définitivement."
+    end
+
     private
 
     def user_params

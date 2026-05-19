@@ -39,7 +39,8 @@ class User < ApplicationRecord
   # ── Subscription helpers ──────────────────────────────────────
 
   def premium?
-    plan == "premium" && subscription_expires_at&.future?
+    # Accepte "premium", "premium_12m", "premium-annual", etc.
+    plan.to_s.match?(/\Apremium/i) && subscription_expires_at&.future?
   end
 
   def in_trial?
@@ -52,10 +53,12 @@ class User < ApplicationRecord
   end
 
   def start_trial!(days)
+    # L'essai gratuit donne accès au plan Starter uniquement.
+    # Les plans Pro et Premium n'ont pas de période d'essai.
     update!(
       trial_ends_at: Time.current + days.days,
       had_trial: true,
-      plan: "free"
+      plan: "starter"
     )
   end
 
@@ -119,25 +122,26 @@ class User < ApplicationRecord
 
   # ── Password reset ────────────────────────────────────────────
 
-  # Génère un token cryptographiquement sûr valable 1h, le sauvegarde et le retourne
+  # Génère un CODE à 6 chiffres (compatible avec l'OTP Flutter), valable 3 minutes.
+  # IMPORTANT: ne pas utiliser hex(32) — le formulaire Flutter n'accepte que des chiffres.
   def generate_password_reset_token!
-    token = SecureRandom.hex(32)
+    code = (SecureRandom.random_number(900_000) + 100_000).to_s  # "100000".."999999"
     update_columns(
-      password_reset_token:    token,
+      password_reset_token:    code,
       password_reset_sent_at:  Time.current,
       password_reset_attempts: 0
     )
-    token
+    code
   end
 
-  # Réinitialise le mot de passe si le token est valide (< 1h, < 3 tentatives)
+  # Réinitialise le mot de passe si le code est valide (< 3 min, < 5 tentatives)
   # Utilise secure_compare pour éviter les timing attacks.
   # Retourne true si succès, false sinon
   def reset_password_with_token!(token, new_password)
     return false if password_reset_token.blank?
-    return false if password_reset_sent_at.nil? || password_reset_sent_at < 1.hour.ago
-    # Bloquer après 3 tentatives (burn-after-read partiel)
-    if (password_reset_attempts || 0) >= 3
+    return false if password_reset_sent_at.nil? || password_reset_sent_at < 3.minutes.ago
+    # Bloquer après 5 tentatives (burn-after-read partiel)
+    if (password_reset_attempts || 0) >= 5
       update_columns(password_reset_token: nil, password_reset_sent_at: nil)
       return false
     end

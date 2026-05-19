@@ -74,10 +74,14 @@ Rails.application.routes.draw do
     # Utilisateurs
     resources :users, only: %i[index show update new create] do
       member do
-        post :suspend
-        post :activate
-        post :extend_subscription
-        post :gift_access
+        post   :suspend
+        post   :activate
+        post   :extend_subscription
+        post   :gift_access
+        delete :destroy
+      end
+      collection do
+        delete :destroy_all
       end
     end
 
