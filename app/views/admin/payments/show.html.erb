@@ -52,10 +52,35 @@
     </div>
 
     <% if @payment.status == "pending" %>
-      <div class="mt-6 pt-4 border-t border-gray-800">
-        <%= button_to "🔄 Re-vérifier via CinetPay", recheck_admin_payment_path(@payment), method: :post,
-              class: "px-4 py-2 text-sm rounded-lg border cursor-pointer transition-colors",
-              style: "background:rgba(234,179,8,0.1);color:#facc15;border-color:rgba(234,179,8,0.3)" %>
+      <div class="mt-6 pt-4 border-t border-gray-800 flex flex-wrap gap-3 items-center">
+        <% if @payment.provider == "stripe" %>
+          <%# Vérification Stripe : interroge l'API Stripe et active le plan si payé %>
+          <%= button_to "🔄 Re-vérifier via Stripe", recheck_admin_payment_path(@payment),
+                method: :post,
+                data: { confirm: "Interroger Stripe pour ce paiement et activer le plan si confirmé ?" },
+                class: "px-4 py-2 text-sm rounded-lg border cursor-pointer transition-colors",
+                style: "background:rgba(99,102,241,0.15);color:#a5b4fc;border-color:rgba(99,102,241,0.4)" %>
+          <% if @payment.provider_ref&.start_with?("cs_") %>
+            <span class="text-xs text-gray-500 font-mono">Session: <%= @payment.provider_ref %></span>
+          <% else %>
+            <span class="text-xs text-red-400">⚠ provider_ref manquant ou invalide</span>
+          <% end %>
+        <% else %>
+          <%# Vérification mobile money (CinetPay, Wave, etc.) %>
+          <%= button_to "🔄 Re-vérifier via #{@payment.provider.humanize}", recheck_admin_payment_path(@payment),
+                method: :post,
+                class: "px-4 py-2 text-sm rounded-lg border cursor-pointer transition-colors",
+                style: "background:rgba(234,179,8,0.1);color:#facc15;border-color:rgba(234,179,8,0.3)" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @payment.status == "success" && @payment.provider == "stripe" %>
+      <div class="mt-4 pt-4 border-t border-gray-800">
+        <div class="text-xs text-emerald-400 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          Plan activé — expire le <%= @payment.subscription&.expires_at&.strftime("%d/%m/%Y") || "—" %>
+        </div>
       </div>
     <% end %>
   </div>

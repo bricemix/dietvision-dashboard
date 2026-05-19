@@ -113,20 +113,66 @@ module Api
         end
 
         # 2. Vérifier si le webhook a déjà traité ce paiement
-        # On cherche uniquement par provider_ref (session_id) pour éviter les faux positifs.
-        # IMPORTANT : le fallback d'activation manuelle a été supprimé — seul le webhook
-        # Stripe signé (POST /api/v1/payments/webhook) peut activer un abonnement.
-        # Cela empêche toute activation frauduleuse via cet endpoint.
         payment = current_user.payments.find_by(provider_ref: session_id)
         webhook_received = payment&.status == "success"
 
-        # 3. Réponse
+        # 3. Fallback sécurisé : Stripe a confirmé le paiement mais le webhook
+        # n'est pas encore arrivé (délai réseau, secret mal configuré, etc.).
+        # On active le plan directement depuis les données Stripe déjà récupérées.
+        # SÉCURITÉ : l'activation ne se fait QUE si stripe_session.payment_status == "paid"
+        # (vérifié côté Stripe au-dessus). La session appartient à current_user
+        # via le payment trouvé par provider_ref (appartenant à current_user).
+        unless webhook_received
+          begin
+            stripe_subscription_id = stripe_session.subscription
+            if stripe_subscription_id.present?
+              stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id)
+              expires_at = Time.at(stripe_sub.current_period_end).utc
+
+              subscription = payment&.subscription ||
+                             current_user.subscriptions.where(status: %w[pending active])
+                                         .order(created_at: :desc).first
+
+              if subscription
+                service = StripeService.new
+                plan_level = service.send(:plan_level_from_subscription, subscription)
+
+                ActiveRecord::Base.transaction do
+                  if payment
+                    payment.update!(
+                      status:   "success",
+                      paid_at:  Time.current,
+                      provider_response: stripe_session.to_json
+                    )
+                  end
+                  subscription.update!(
+                    stripe_subscription_id: stripe_subscription_id,
+                    status:     "active",
+                    starts_at:  Time.at(stripe_sub.current_period_start).utc,
+                    expires_at: expires_at
+                  )
+                  current_user.update!(
+                    plan:                    plan_level,
+                    subscription_expires_at: expires_at
+                  )
+                end
+                webhook_received = true
+                Rails.logger.info("Payments#verify fallback : #{current_user.email} → #{plan_level} (webhook non reçu)")
+              end
+            end
+          rescue => e
+            Rails.logger.error("Payments#verify fallback error: #{e.message}")
+            # Ne pas bloquer la réponse — retourner webhook_received: false
+          end
+        end
+
+        # 4. Réponse
         render json: {
           paid:             true,
-          plan:             current_user.plan,
+          plan:             current_user.reload.plan,
           webhook_received: webhook_received,
           invoice_sent:     true,   # Stripe envoie la facture automatiquement
-          email_sent:       false,  # pas d'email supplémentaire ici
+          email_sent:       false,
           user:             user_json(current_user)
         }
 

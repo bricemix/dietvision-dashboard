@@ -1,4 +1,13 @@
 class Rack::Attack
+  # ── Whitelist : endpoint webhook Stripe ──────────────────────────────────────
+  # Les webhooks Stripe ne portent pas de JWT et peuvent être envoyés en rafale
+  # (replay des événements manqués). On les exclut de tout throttle pour éviter
+  # qu'un 429 fasse croire à Stripe que l'endpoint est en panne.
+  # La sécurité est assurée par la vérification de signature HMAC dans le contrôleur.
+  safelist("allow-stripe-webhook") do |req|
+    req.path == "/api/v1/payments/webhook" && req.post?
+  end
+
   # ── Throttle : login API mobile (brute-force credentials) ────────────────────
   # 10 tentatives par IP sur 1 minute
   throttle("api/login/ip", limit: 10, period: 1.minute) do |req|

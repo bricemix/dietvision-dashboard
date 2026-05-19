@@ -7,14 +7,14 @@
   <%= stat_card "Échoués",         Payment.where(status: "failed").count, icon_x_circle, "text-red-400" %>
 </div>
 
-<div class="mb-4 flex items-center justify-between gap-3">
+<div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
   <%= form_with url: admin_payments_path, method: :get, class: "flex gap-2 flex-wrap" do |f| %>
     <%= f.select :status,
           [["Tous statuts", ""], ["Succès", "success"], ["En attente", "pending"], ["Échoué", "failed"]],
           { selected: params[:status] },
           class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
     <%= f.select :provider,
-          [["Tous opérateurs", ""], ["MVola", "mvola"], ["Orange Money", "orange_money"],
+          [["Tous opérateurs", ""], ["Stripe", "stripe"], ["MVola", "mvola"], ["Orange Money", "orange_money"],
            ["Airtel Money", "airtel_money"], ["CinetPay", "cinetpay"], ["MTN", "mtn"],
            ["Orange", "orange"], ["Wave", "wave"]],
           { selected: params[:provider] },
@@ -22,9 +22,21 @@
     <%= f.submit "Filtrer",
           class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
   <% end %>
-  <%# Export CSV %>
-  <%= link_to "⬇ Export CSV", admin_payments_path(format: :csv, status: params[:status], provider: params[:provider]),
-        class: "px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-colors" %>
+
+  <div class="flex gap-2 flex-wrap">
+    <%# Bouton bulk repair Stripe — visible seulement s'il y a des pending Stripe %>
+    <% if @pending_stripe_count > 0 %>
+      <%= button_to "🔄 Réparer #{@pending_stripe_count} pending Stripe",
+            repair_stripe_pending_admin_payments_path,
+            method: :post,
+            data: { confirm: "Vérifier #{@pending_stripe_count} paiement(s) Stripe en attente auprès de Stripe et activer les plans confirmés ?" },
+            class: "px-4 py-2 text-sm rounded-lg border cursor-pointer transition-colors",
+            style: "background:rgba(234,179,8,0.1);color:#facc15;border-color:rgba(234,179,8,0.3)" %>
+    <% end %>
+    <%# Export CSV %>
+    <%= link_to "⬇ Export CSV", admin_payments_path(format: :csv, status: params[:status], provider: params[:provider]),
+          class: "px-4 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-colors" %>
+  </div>
 </div>
 
 <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">

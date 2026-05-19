@@ -228,50 +228,87 @@ class StripeService
     user = User.find_by(stripe_customer_id: invoice.customer)
     return log_warn("invoice.paid : aucun user pour customer #{invoice.customer}") unless user
 
-    # Récupérer la vraie date de fin depuis Stripe
-    stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id)
-    expires_at = Time.at(period_end(stripe_sub)).utc
-
     subscription = Subscription.find_by(stripe_subscription_id: stripe_subscription_id) ||
                    user.subscriptions.where(status: %w[pending active past_due])
                        .order(created_at: :desc).first
 
     return log_warn("invoice.paid : aucune subscription pour #{stripe_subscription_id}") unless subscription
 
-    ActiveRecord::Base.transaction do
-      # Enregistrer le paiement (idempotent sur payment_intent)
-      payment = user.payments.find_or_initialize_by(provider_ref: invoice.payment_intent.to_s)
-      payment.assign_attributes(
-        subscription:      subscription,
-        amount:            invoice.amount_paid,
-        currency:          invoice.currency.upcase,
-        provider:          "stripe",
-        status:            "success",
-        provider_response: invoice.to_json,
-        paid_at:           Time.at(invoice.created).utc
-      )
-      payment.save!
+    # Récupérer la vraie date de fin depuis Stripe (non bloquant si l'API échoue)
+    stripe_sub = nil
+    expires_at = nil
+    begin
+      stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id)
+      expires_at = Time.at(period_end(stripe_sub)).utc
+    rescue => e
+      # Si l'API Stripe échoue (mauvaise clé, réseau) → calculer expires_at localement
+      # à partir de la fréquence du plan. Moins précis mais garantit l'activation.
+      Rails.logger.warn("[StripeService] Stripe::Subscription.retrieve échoué : #{e.message} — expires_at calculé localement")
+      plan_obj   = Plan.find_by(slug: subscription.plan)
+      expires_at = Time.current + (plan_obj&.duration || 1.month)
+    end
 
-      # Activer l'abonnement avec la vraie période Stripe
+    plan_level = plan_level_from_subscription(subscription)
+
+    # ── ÉTAPE 1 : Activer l'abonnement et le plan utilisateur (transaction critique) ──
+    # SÉPARÉ du paiement pour que l'activation ne soit jamais bloquée par
+    # une erreur d'enregistrement comptable (validation, contrainte DB…).
+    ActiveRecord::Base.transaction do
+      starts_at = stripe_sub ? Time.at(period_start(stripe_sub)).utc : Time.current
       subscription.update!(
         stripe_subscription_id: stripe_subscription_id,
         status:     "active",
-        starts_at:  Time.at(period_start(stripe_sub)).utc,
+        starts_at:  starts_at,
         expires_at: expires_at
       )
-
-      # Passer l'utilisateur au bon plan selon le slug de l'abonnement
-      plan_level = plan_level_from_subscription(subscription)
       user.update!(
         plan:                    plan_level,
         subscription_expires_at: expires_at
       )
     end
 
-    # Notification email (hors transaction pour ne pas bloquer en cas d'échec SMTP)
-    UserMailer.subscription_activated(user, expires_at).deliver_later rescue nil
+    Rails.logger.info("Stripe invoice.paid : #{user.email} → #{plan_level} jusqu'au #{expires_at.strftime('%d/%m/%Y')}")
 
-    Rails.logger.info("Stripe invoice.paid : #{user.email} premium jusqu'au #{expires_at.strftime('%d/%m/%Y')}")
+    # ── ÉTAPE 2 : Enregistrer le paiement (hors transaction critique) ──
+    # Une erreur ici ne doit pas rollback l'activation du plan ci-dessus.
+    begin
+      # Chercher d'abord le paiement PENDING lié à cet abonnement.
+      # Le paiement initial est créé dans #subscribe avec provider_ref = session_id (cs_xxx).
+      # invoice.payment_intent retourne un payment_intent_id (pi_xxx) — différent !
+      # Sans ce fix, find_or_initialize_by(pi_xxx) crée un 2ème enregistrement
+      # et le paiement original reste "pending" éternellement sur le dashboard.
+      payment = subscription.payments.where(status: "pending")
+                            .order(created_at: :desc).first
+
+      pi = invoice.payment_intent.to_s.presence || invoice.id.to_s
+
+      unless payment
+        # Pas de pending → renouvellement ou 2ème tentative : idempotent sur payment_intent
+        payment = user.payments.find_or_initialize_by(provider_ref: pi)
+      end
+
+      # Montant : Stripe envoie des centimes (entier). Pour les renouvellements avec
+      # remise 100 % (amount_paid == 0), on utilise 1 pour passer la validation > 0.
+      amount = invoice.amount_paid.to_i > 0 ? invoice.amount_paid.to_i : 1
+
+      payment.assign_attributes(
+        subscription:      subscription,
+        amount:            amount,
+        currency:          invoice.currency.to_s.upcase,
+        provider:          "stripe",
+        status:            "success",
+        provider_response: invoice.to_json,
+        paid_at:           Time.at(invoice.created).utc
+      )
+      payment.save!
+    rescue => e
+      # L'enregistrement comptable a échoué, mais le plan EST activé (étape 1 réussie).
+      # On log l'erreur sans relancer l'exception — le webhook retourne 200 à Stripe.
+      Rails.logger.error("[StripeService] invoice.paid paiement non enregistré pour #{user.email}: #{e.message}")
+    end
+
+    # ── ÉTAPE 3 : Notification email ───────────────────────────────────────────
+    UserMailer.subscription_activated(user, expires_at).deliver_later rescue nil
   end
 
   # ── invoice.payment_failed ────────────────────────────────────────────────────

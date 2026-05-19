@@ -106,7 +106,8 @@ Rails.application.routes.draw do
 
     # Paiements
     resources :payments, only: %i[index show] do
-      member { post :recheck }
+      member     { post :recheck }
+      collection { post :repair_stripe_pending }
     end
 
     # Configuration API
