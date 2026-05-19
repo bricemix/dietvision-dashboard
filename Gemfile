@@ -23,7 +23,7 @@ gem "faraday-retry"
 gem "stripe", "~> 13.0"
 
 # Pagination
-gem "pagy", "~> 9.0"
+gem "pagy", "~> 43.5"
 
 # Charts (admin dashboard)
 gem "chartkick"
