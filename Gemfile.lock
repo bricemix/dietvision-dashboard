@@ -82,7 +82,7 @@ GEM
     benchmark (0.5.0)
     bigdecimal (4.1.2)
     bindex (0.8.1)
-    bootsnap (1.23.0)
+    bootsnap (1.24.4)
       msgpack (~> 1.2)
     brakeman (8.0.4)
       racc
@@ -201,6 +201,8 @@ GEM
     parser (3.3.11.1)
       ast (~> 2.4.1)
       racc
+    pg (1.6.3-x64-mingw-ucrt)
+    pg (1.6.3-x86_64-linux)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -218,6 +220,8 @@ GEM
     raabro (1.4.0)
     racc (1.8.1)
     rack (3.2.6)
+    rack-attack (6.8.0)
+      rack (>= 1.0, < 4)
     rack-cors (3.0.0)
       logger
       rack (>= 3.0.14)
@@ -388,8 +392,10 @@ DEPENDENCIES
   jwt (~> 2.9)
   kamal
   pagy (~> 9.0)
+  pg (~> 1.5)
   propshaft
   puma (>= 5.0)
+  rack-attack
   rack-cors
   rails (~> 8.0.4)
   rubocop-rails-omakase
