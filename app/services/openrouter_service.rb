@@ -63,13 +63,13 @@ class OpenrouterService
   end
 
   # Coach IA — messages est un array [{role:, content:}]
-  def coach_chat(messages, profile:, model: nil, locale: "fr", max_tokens: nil)
+  def coach_chat(messages, profile:, model: nil, locale: "fr", max_tokens: nil, today_context: {})
     model ||= AppConfig.default_model
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
     system_msg = {
       role: "system",
-      content: coach_system_prompt(profile, locale)
+      content: coach_system_prompt(profile, locale, today_context)
     }
 
     payload = {
@@ -170,7 +170,7 @@ class OpenrouterService
     (input_tokens * rate[:input] + output_tokens * rate[:output]) / 1_000_000.0
   end
 
-  def coach_system_prompt(profile, locale)
+  def coach_system_prompt(profile, locale, today_context = {})
     lang_instruction = case locale
     when "en" then "Always respond in English."
     when "de" then "Antworte immer auf Deutsch."
@@ -181,12 +181,69 @@ class OpenrouterService
     else           "Réponds toujours en français."
     end
 
-    "You are DietVision, an expert nutrition and fitness coach. " \
-    "User profile: #{profile.to_json}. " \
-    "#{lang_instruction} " \
-    "Be concise and practical. Max 3-4 sentences. " \
-    "IMPORTANT: always reply in the SAME language the user writes in — " \
-    "if the user writes in English reply in English, if in French reply in French, etc."
+    # ── Contexte du jour ──────────────────────────────────────────────────────
+    today_section = build_today_context(profile, today_context)
+
+    # ── Profil utilisateur enrichi ────────────────────────────────────────────
+    weight      = profile["weight"].to_s
+    goal        = profile["goal"].to_s
+    diet        = profile["diet"].to_s.presence || "omnivore"
+    restrictions = Array(profile["restrictions"]).join(", ").presence || "aucune"
+    tdee        = profile["tdee"].to_f.round
+    target_p    = profile["targetProtein"].to_i
+    target_c    = profile["targetCarbs"].to_i
+    target_f    = profile["targetFat"].to_i
+
+    profile_section = <<~PROFILE.strip
+      PROFIL UTILISATEUR:
+      • Poids: #{weight} kg | Objectif: #{goal} | Régime: #{diet}
+      • Restrictions alimentaires: #{restrictions}
+      • Objectif calorique: #{tdee} kcal/jour
+      • Macros cibles: Protéines #{target_p}g | Glucides #{target_c}g | Lipides #{target_f}g
+    PROFILE
+
+    <<~PROMPT.strip
+      Tu es DietVision, un coach nutrition et fitness IA expert et personnel.
+      Tu as accès aux données réelles de l'utilisateur pour aujourd'hui.
+      #{profile_section}
+      #{today_section}
+      #{lang_instruction}
+      Sois concis et pratique. Maximum 4-5 phrases sauf si un plan détaillé est demandé.
+      Utilise TOUJOURS les données réelles (calories restantes, protéines, repas) dans tes réponses.
+      IMPORTANT: réponds TOUJOURS dans la langue que l'utilisateur utilise pour écrire.
+    PROMPT
+  end
+
+  def build_today_context(profile, ctx)
+    return "" if ctx.blank?
+
+    date          = ctx["date"].presence || Date.today.to_s
+    kcal_consumed = ctx["kcal_consumed"].to_i
+    kcal_target   = ctx["kcal_target"].to_i.then { |v| v > 0 ? v : profile["tdee"].to_f.round }
+    kcal_remaining = ctx["kcal_remaining"].to_i
+    protein_g     = ctx["protein_g"].to_i
+    protein_target = ctx["protein_target_g"].to_i
+    carbs_g       = ctx["carbs_g"].to_i
+    carbs_target  = ctx["carbs_target_g"].to_i
+    fat_g         = ctx["fat_g"].to_i
+    fat_target    = ctx["fat_target_g"].to_i
+
+    meals = Array(ctx["meals"])
+    meals_str = if meals.any?
+      meals.map { |m| "    • #{m['name']}: #{m['calories']} kcal (P#{m['protein']}g G#{m['carbs']}g L#{m['fat']}g)" }.join("\n")
+    else
+      "    • Aucun repas enregistré"
+    end
+
+    <<~TODAY.strip
+
+      CONTEXTE DU JOUR (#{date}):
+      • Calories: #{kcal_consumed} / #{kcal_target} kcal consommées → #{kcal_remaining} kcal restantes
+      • Protéines: #{protein_g}g / #{protein_target}g (#{protein_target > 0 ? ((protein_g.to_f / protein_target) * 100).round : 0}%)
+      • Glucides: #{carbs_g}g / #{carbs_target}g | Lipides: #{fat_g}g / #{fat_target}g
+      • Repas du jour:
+      #{meals_str}
+    TODAY
   end
 
   def food_analysis_prompt(locale = "fr")

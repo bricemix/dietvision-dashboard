@@ -21,17 +21,20 @@ module Api
       end
 
       # POST /api/v1/ai/coach
-      # Body: { messages: [{role: "user", content: "..."}], profile: {...}, locale: "fr" }
+      # Body: { messages: [{role: "user", content: "..."}], profile: {...}, locale: "fr",
+      #         today_context: { kcal_consumed:, kcal_remaining:, protein_g:, meals: [...] } }
       def coach
         messages = params[:messages]
         return render json: { error: "Messages manquants" }, status: :bad_request if messages.blank?
 
-        profile    = params[:profile] || {}
-        locale     = sanitize_locale(params[:locale])
-        max_tokens = params[:max_tokens].to_i.clamp(100, 2000).then { |v| v > 0 ? v : nil }
-        service    = OpenrouterService.new(user: current_user)
-        result     = service.coach_chat(messages, profile: profile, model: params[:model],
-                                        locale: locale, max_tokens: max_tokens)
+        profile       = params[:profile] || {}
+        locale        = sanitize_locale(params[:locale])
+        max_tokens    = params[:max_tokens].to_i.clamp(100, 2000).then { |v| v > 0 ? v : nil }
+        today_context = (params[:today_context] || {}).to_unsafe_h
+        service       = OpenrouterService.new(user: current_user)
+        result        = service.coach_chat(messages, profile: profile, model: params[:model],
+                                           locale: locale, max_tokens: max_tokens,
+                                           today_context: today_context)
 
         if result[:error]
           render json: result, status: :unprocessable_entity

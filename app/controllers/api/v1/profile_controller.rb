@@ -78,6 +78,32 @@ module Api
         end
       end
 
+      # ── Meals (historique des repas scannés) ────────────────────────────────
+
+      # GET /api/v1/user/meals
+      def meals_show
+        data = parse_json(current_user.meals_data)
+        render json: { meals: data || [] }
+      end
+
+      # PUT /api/v1/user/meals
+      def meals_update
+        body = json_body
+        meals_data = body['meals'] || body
+
+        unless meals_data.is_a?(Array)
+          render json: { error: 'Format invalide — attendu un tableau de repas' }, status: :bad_request
+          return
+        end
+
+        if current_user.update(meals_data: meals_data.to_json)
+          render json: { ok: true, meals_saved: meals_data.size }
+        else
+          render json: { error: current_user.errors.full_messages.join(", ") },
+                 status: :unprocessable_entity
+        end
+      end
+
       # ── Weekly planning ──────────────────────────────────────────────────────
 
       # GET /api/v1/user/planning

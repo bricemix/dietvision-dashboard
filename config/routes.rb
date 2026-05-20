@@ -55,6 +55,8 @@ Rails.application.routes.draw do
       put    "user/planning",      to: "profile#planning_update"
       get    "user/body_entries",  to: "profile#body_entries_show"
       put    "user/body_entries",  to: "profile#body_entries_update"
+      get    "user/meals",         to: "profile#meals_show"
+      put    "user/meals",         to: "profile#meals_update"
 
       # Health check
       get    "health",         to: "health#show"
