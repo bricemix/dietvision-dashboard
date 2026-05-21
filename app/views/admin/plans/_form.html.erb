@@ -641,9 +641,9 @@
         <span class="text-[10px] font-normal text-gray-600">Nom · Description · Fonctionnalités · Bouton</span>
       </div>
 
-      <%# Tabs langue %>
+      <%# Tabs langue — US en premier (défaut) %>
       <div class="flex gap-2 flex-wrap mb-5">
-        <% [["fr","🇫🇷","FR"],["en","🇬🇧","EN"],["de","🇩🇪","DE"],["es","🇪🇸","ES"]].each_with_index do |(lc, flag, label), idx| %>
+        <% [["us","🇺🇸","US"],["fr","🇫🇷","FR"],["en","🇬🇧","EN"],["de","🇩🇪","DE"],["es","🇪🇸","ES"]].each_with_index do |(lc, flag, label), idx| %>
           <button type="button" onclick="switchTransLang('<%= lc %>')" id="tab-lang-<%= lc %>"
                   class="lang-tab <%= idx == 0 ? 'active' : '' %>">
             <%= flag %> <%= label %>
@@ -652,9 +652,22 @@
       </div>
 
       <%# Panneau par langue %>
-      <% [["fr","🇫🇷 Français"],["en","🇬🇧 English"],["de","🇩🇪 Deutsch"],["es","🇪🇸 Español"]].each_with_index do |(lc, lang_label), idx| %>
+      <% [
+           ["us", "🇺🇸 English (US)", "Try free for 7 days", "Ex: 100 photos per month", "Ex: Weekly report"],
+           ["fr", "🇫🇷 Français",      "Essayer 7 jours gratuits", "Ex: 100 photos par mois", "Ex: Rapport hebdomadaire"],
+           ["en", "🇬🇧 English (UK)",  "Try free for 7 days", "Ex: 100 photos per month", "Ex: Weekly report"],
+           ["de", "🇩🇪 Deutsch",       "7 Tage kostenlos testen", "Ex: 100 Fotos pro Monat", "Ex: Wochenbericht"],
+           ["es", "🇪🇸 Español",       "Probar 7 días gratis", "Ex: 100 fotos por mes", "Ex: Informe semanal"]
+         ].each_with_index do |(lc, lang_label, cta_ph, feat_ph, excl_ph), idx| %>
         <div id="trans-panel-<%= lc %>" <%= idx > 0 ? 'style="display:none"' : '' %>>
-          <p class="text-xs text-gray-600 mb-3"><%= lang_label %> — laissez vide pour hériter des valeurs par défaut</p>
+          <% if lc == 'us' %>
+            <div class="flex items-center gap-2 mb-3 px-2 py-1.5 rounded-lg" style="background:rgba(200,255,0,0.06);border:1px solid rgba(200,255,0,0.15)">
+              <span class="text-xs" style="color:#C8FF00">★</span>
+              <p class="text-xs" style="color:#C8FF00;margin:0">Langue <strong>par défaut</strong> — utilisée dans l'app si aucune traduction n'est disponible pour la langue de l'utilisateur</p>
+            </div>
+          <% else %>
+            <p class="text-xs text-gray-600 mb-3"><%= lang_label %> — laissez vide pour hériter de la version US</p>
+          <% end %>
 
           <div class="grid grid-cols-2 gap-4 mb-3">
             <div>
@@ -667,8 +680,7 @@
               <label class="block text-xs text-gray-400 mb-1">Texte bouton CTA (<%= lc.upcase %>)</label>
               <input type="text" name="plan[translations][<%= lc %>][cta_label]"
                      value="<%= plan.translations.dig(lc, 'cta_label') %>"
-                     class="f-input"
-                     placeholder="<%= lc == 'fr' ? 'Essayer 7 jours gratuits' : 'Try free for 7 days' %>">
+                     class="f-input" placeholder="<%= cta_ph %>">
             </div>
           </div>
 
@@ -695,8 +707,7 @@
           </div>
           <div class="flex gap-2 mb-4">
             <input type="text" id="trans-feat-input-<%= lc %>" class="f-input flex-1"
-                   style="border-style:dashed"
-                   placeholder="<%= lc == 'fr' ? 'Ex: 100 photos par mois' : 'Ex: 100 photos per month' %>">
+                   style="border-style:dashed" placeholder="<%= feat_ph %>">
             <button type="button" onclick="addTransFeat('<%= lc %>')"
                     class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">+</button>
           </div>
@@ -717,8 +728,7 @@
           </div>
           <div class="flex gap-2">
             <input type="text" id="trans-excl-input-<%= lc %>" class="f-input flex-1"
-                   style="border-style:dashed;border-color:#f87171"
-                   placeholder="<%= lc == 'fr' ? 'Ex: Rapport hebdomadaire' : 'Ex: Weekly report' %>">
+                   style="border-style:dashed;border-color:#f87171" placeholder="<%= excl_ph %>">
             <button type="button" onclick="addTransExcl('<%= lc %>')"
                     class="px-4 py-2 text-sm rounded-lg text-white transition-colors"
                     style="background:#7f1d1d">+</button>
@@ -882,7 +892,7 @@
 
   // ── Translation tabs ──────────────────────────────────────────
   function switchTransLang(lc) {
-    ['fr','en','de','es'].forEach(l => {
+    ['us','fr','en','de','es'].forEach(l => {
       const panel = document.getElementById('trans-panel-' + l);
       const tab   = document.getElementById('tab-lang-' + l);
       if (panel) panel.style.display = l === lc ? '' : 'none';
@@ -930,8 +940,8 @@
     };
     const ids = [
       'features-container', 'features-excluded-container',
-      'trans-feat-fr','trans-feat-en','trans-feat-de','trans-feat-es',
-      'trans-excl-fr','trans-excl-en','trans-excl-de','trans-excl-es'
+      'trans-feat-us','trans-feat-fr','trans-feat-en','trans-feat-de','trans-feat-es',
+      'trans-excl-us','trans-excl-fr','trans-excl-en','trans-excl-de','trans-excl-es'
     ];
     ids.forEach(id => {
       const el = document.getElementById(id);

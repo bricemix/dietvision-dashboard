@@ -59,7 +59,7 @@ class Plan < ApplicationRecord
   #              "features" => [...], "features_excluded" => [...], "cta_label" => "..." },
   #              "en" => { ... }, "de" => { ... }, "es" => { ... } }
 
-  LOCALES = %w[fr en de es].freeze
+  LOCALES = %w[us fr en de es].freeze
 
   def translations
     JSON.parse(translations_json || "{}") rescue {}
@@ -70,14 +70,15 @@ class Plan < ApplicationRecord
   end
 
   # Returns translated fields for a given locale, falling back to default (fr) then to base columns.
-  def translate(locale = "fr")
-    t = translations[locale.to_s] || translations["fr"] || {}
+  def translate(locale = "us")
+    # "us" → American English (default), fallback chain: us → en → fr → base columns
+    t = translations[locale.to_s] || translations["en"] || translations["fr"] || {}
     {
       "name"              => t["name"].presence || name,
       "description"       => t["description"].presence || description.to_s,
       "features"          => t["features"].presence || features,
       "features_excluded" => t["features_excluded"].presence || features_excluded,
-      "cta_label"         => t["cta_label"].presence || (respond_to?(:cta_label) ? self[:cta_label] : nil) || "Essayer 7 jours gratuits"
+      "cta_label"         => t["cta_label"].presence || (respond_to?(:cta_label) ? self[:cta_label] : nil) || "Try free for 7 days"
     }
   end
 
