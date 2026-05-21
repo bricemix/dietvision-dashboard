@@ -111,6 +111,49 @@ module Admin
       redirect_to admin_user_path(@user), notice: "Accès premium offert pour #{days} jours"
     end
 
+    # ── Données utilisateur ───────────────────────────────────────
+    def data
+      @user          = User.find(params[:id])
+      @meals_data    = begin; JSON.parse(@user.meals_data    || '[]'); rescue; []; end
+      @fitai_profile = begin; JSON.parse(@user.fitai_profile || '{}'); rescue; {}; end
+      @body_entries  = begin; JSON.parse(@user.body_entries_data || '[]'); rescue; []; end
+      @planning_data = begin; JSON.parse(@user.planning_data || '[]'); rescue; []; end
+    end
+
+    # Supprime un type de données (ou toutes)
+    # Params : data_type = "meals" | "fitai_profile" | "body_entries" | "planning" | "all"
+    def clear_data
+      @user = User.find(params[:id])
+      type  = params[:data_type].to_s
+
+      notice = case type
+      when "meals"
+        @user.update!(meals_data: nil)
+        AdminLog.log(admin: current_admin, action: "clear_meals", resource: @user, ip: request.remote_ip)
+        "#{@user.name} — repas supprimés"
+      when "fitai_profile"
+        @user.update!(fitai_profile: nil)
+        AdminLog.log(admin: current_admin, action: "clear_fitai_profile", resource: @user, ip: request.remote_ip)
+        "#{@user.name} — profil nutritionnel supprimé"
+      when "body_entries"
+        @user.update!(body_entries_data: nil)
+        AdminLog.log(admin: current_admin, action: "clear_body_entries", resource: @user, ip: request.remote_ip)
+        "#{@user.name} — mesures corporelles supprimées"
+      when "planning"
+        @user.update!(planning_data: nil)
+        AdminLog.log(admin: current_admin, action: "clear_planning", resource: @user, ip: request.remote_ip)
+        "#{@user.name} — planning supprimé"
+      when "all"
+        @user.update!(meals_data: nil, fitai_profile: nil, body_entries_data: nil, planning_data: nil)
+        AdminLog.log(admin: current_admin, action: "clear_all_data", resource: @user, ip: request.remote_ip)
+        "#{@user.name} — toutes les données supprimées"
+      else
+        return redirect_to data_admin_user_path(@user), alert: "Type de données inconnu."
+      end
+
+      redirect_to data_admin_user_path(@user), notice: notice
+    end
+
     # ── Suppression d'un compte utilisateur ──────────────────────
     # Mot de passe requis : "dietvision"
     def destroy

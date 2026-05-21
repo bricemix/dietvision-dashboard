@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Votre bilan DietVision</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background-color: #f0f0f5; font-family: 'Helvetica Neue', Arial, sans-serif; }
+
+    .wrapper { max-width: 600px; margin: 36px auto; background: #ffffff; border-radius: 18px;
+               overflow: hidden; box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+
+    /* Header */
+    .header { background: #0a0a0f; padding: 28px 40px 24px; text-align: center; }
+    .logo-text { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+    .logo-diet { color: #ffffff; }
+    .logo-vision { color: #c8ff00; }
+    .period-label { color: #4a4a6a; font-size: 12px; margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .plan-badge { display: inline-block; margin-top: 10px; background: rgba(200,255,0,0.12);
+                  border: 1px solid rgba(200,255,0,0.3); color: #c8ff00;
+                  font-size: 10px; font-weight: 700; padding: 3px 10px;
+                  border-radius: 100px; letter-spacing: 1px; }
+
+    /* Body */
+    .body { padding: 32px 40px; }
+    .greeting { font-size: 20px; font-weight: 700; color: #0a0a0f; margin-bottom: 6px; }
+    .subtitle { font-size: 14px; color: #6a6a8a; margin-bottom: 28px; line-height: 1.6; }
+
+    /* Section title */
+    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                     letter-spacing: 0.8px; color: #a0a0b8; margin-bottom: 12px; }
+
+    /* Stats grid 4 colonnes */
+    .stats-row { display: table; width: 100%; border-collapse: separate; border-spacing: 8px;
+                 margin: 0 -8px 24px; }
+    .stat-cell { display: table-cell; width: 25%; text-align: center;
+                 background: #f8f8fc; border-radius: 12px; padding: 16px 8px;
+                 border: 1px solid #eeeef8; vertical-align: middle; }
+    .stat-icon { font-size: 20px; display: block; margin-bottom: 5px; }
+    .stat-value { font-size: 24px; font-weight: 900; color: #0a0a0f; line-height: 1; }
+    .stat-value.lime  { color: #5a8a00; }
+    .stat-value.red   { color: #dc2626; }
+    .stat-value.blue  { color: #2563eb; }
+    .stat-label { font-size: 10px; color: #8a8aaa; font-weight: 600;
+                  text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
+
+    /* Macro bars */
+    .macros-section { background: #f8f8fc; border-radius: 12px; padding: 18px 20px;
+                      margin-bottom: 24px; border: 1px solid #eeeef8; }
+    .macro-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .macro-row:last-child { margin-bottom: 0; }
+    .macro-label { font-size: 12px; color: #6a6a8a; font-weight: 600; width: 80px; flex-shrink: 0; }
+    .macro-bar-wrap { flex: 1; background: #e8e8f0; border-radius: 100px; height: 7px; overflow: hidden; }
+    .macro-bar { height: 7px; border-radius: 100px; }
+    .macro-value { font-size: 12px; font-weight: 700; color: #0a0a0f; width: 60px; text-align: right; flex-shrink: 0; }
+
+    /* Kcal status */
+    .kcal-status { border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
+    .kcal-status.balanced { background: #f0fff4; border: 1px solid #86efac; }
+    .kcal-status.deficit  { background: #eff6ff; border: 1px solid #93c5fd; }
+    .kcal-status.surplus  { background: #fff7ed; border: 1px solid #fdba74; }
+    .kcal-status.unknown  { background: #f8f8fc; border: 1px solid #eeeef8; }
+    .kcal-status-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .kcal-status-title.balanced { color: #15803d; }
+    .kcal-status-title.deficit  { color: #1d4ed8; }
+    .kcal-status-title.surplus  { color: #c2410c; }
+    .kcal-status-title.unknown  { color: #4a4a6a; }
+    .kcal-status-text { font-size: 12px; color: #6a6a8a; line-height: 1.5; }
+
+    /* Meals list */
+    .meals-section { margin-bottom: 24px; }
+    .meal-row { display: flex; align-items: center; gap: 12px; padding: 10px 0;
+                border-bottom: 1px solid #f0f0f8; }
+    .meal-row:last-child { border-bottom: none; }
+    .meal-thumb { width: 42px; height: 42px; border-radius: 10px; object-fit: cover;
+                  background: #f0f0f8; flex-shrink: 0; }
+    .meal-thumb-placeholder { width: 42px; height: 42px; border-radius: 10px;
+                               background: #f0f0f8; display: flex; align-items: center;
+                               justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .meal-name { font-size: 13px; font-weight: 600; color: #0a0a0f; flex: 1; }
+    .meal-meta { font-size: 11px; color: #8a8aaa; margin-top: 2px; }
+    .meal-kcal { font-size: 13px; font-weight: 800; color: #5a8a00; flex-shrink: 0; }
+    .meal-score { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px;
+                  border-radius: 100px; margin-left: 6px; }
+    .score-high   { background: #dcfce7; color: #166534; }
+    .score-medium { background: #fef9c3; color: #854d0e; }
+    .score-low    { background: #fee2e2; color: #991b1b; }
+
+    /* Progression corporelle */
+    .body-section { background: #0a0a0f; border-radius: 12px; padding: 20px 24px;
+                    margin-bottom: 24px; }
+    .body-section .section-title { color: #4a4a6a; }
+    .body-row { display: flex; justify-content: space-between; align-items: center;
+                padding: 7px 0; border-bottom: 1px solid #1a1a2a; }
+    .body-row:last-child { border-bottom: none; }
+    .body-key { font-size: 13px; color: #7070a0; }
+    .body-val { font-size: 13px; font-weight: 700; color: #ffffff; }
+    .body-val.lime  { color: #c8ff00; }
+    .body-val.green { color: #4ade80; }
+    .body-val.red   { color: #f87171; }
+
+    /* Activité IA */
+    .ai-section { background: #f8f8fc; border-radius: 12px; padding: 18px 20px;
+                  margin-bottom: 24px; border: 1px solid #eeeef8; }
+    .activity-bar-wrap { background: #e8e8f0; border-radius: 100px; height: 7px;
+                         overflow: hidden; margin: 10px 0 6px; }
+    .activity-bar { height: 7px; border-radius: 100px; background: #c8ff00; }
+    .activity-meta { display: flex; justify-content: space-between; font-size: 11px; color: #8a8aaa; }
+    .activity-msg { font-size: 13px; color: #3a3a5a; margin-top: 10px; line-height: 1.5; }
+
+    /* Expiry warning */
+    .expiry-warning { background: #fff8e6; border: 1px solid #f5d87a; border-radius: 10px;
+                      padding: 14px 18px; margin-bottom: 24px; }
+    .expiry-warning-title { font-size: 13px; font-weight: 700; color: #b07c00; margin-bottom: 3px; }
+    .expiry-warning-text { font-size: 12px; color: #8a6300; line-height: 1.5; }
+
+    /* Tip */
+    .tip { background: #f4fff0; border-left: 3px solid #c8ff00; border-radius: 0 8px 8px 0;
+           padding: 12px 16px; margin-bottom: 24px; }
+    .tip-label { font-size: 10px; font-weight: 700; color: #5a8a00;
+                 text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .tip-text { font-size: 13px; color: #3a3a4a; line-height: 1.5; }
+
+    /* CTA */
+    .cta-wrap { text-align: center; margin: 24px 0 20px; }
+    .cta { display: inline-block; background: #c8ff00; color: #0a0a0f;
+           font-size: 14px; font-weight: 800; padding: 13px 36px;
+           border-radius: 100px; text-decoration: none; }
+
+    .divider { height: 1px; background: #eeeef4; margin: 20px 0; }
+
+    /* Footer */
+    .footer { background: #f8f8fc; padding: 20px 40px; border-top: 1px solid #eeeef4; text-align: center; }
+    .footer-text { font-size: 11px; color: #a0a0b8; line-height: 1.7; }
+    .footer-link { color: #7070a0; text-decoration: none; }
+
+    .no-data { font-size: 13px; color: #a0a0b8; font-style: italic; padding: 12px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-text">
+      <span class="logo-diet">Diet</span><span class="logo-vision">Vision</span>
+    </div>
+    <div class="period-label">
+      <%= @frequency_label.upcase %> · <%= @period_label.upcase %>
+    </div>
+    <div><span class="plan-badge"><%= @plan.name.upcase %></span></div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <p class="greeting">Bonjour <%= @user.name %> 👋</p>
+    <p class="subtitle">
+      <% if @meals_count == 0 %>
+        Vous n'avez enregistré aucun repas sur cette période. Reprenez dès aujourd'hui pour suivre votre progression nutritionnelle !
+      <% elsif @kcal_status == :balanced %>
+        Excellente semaine — vos apports caloriques sont parfaitement équilibrés. Voici votre bilan complet.
+      <% elsif @kcal_status == :deficit %>
+        Vous êtes en déficit calorique cette période. Bon travail si c'est votre objectif ! Voici votre bilan.
+      <% else %>
+        Voici votre bilan nutritionnel de la période. Continuez à suivre vos repas pour rester dans vos objectifs.
+      <% end %>
+    </p>
+
+    <!-- Stats 4 colonnes -->
+    <div class="section-title">Chiffres clés de la période</div>
+    <table class="stats-row">
+      <tr>
+        <td class="stat-cell">
+          <span class="stat-icon">🍽️</span>
+          <div class="stat-value<%= @meals_count > 0 ? ' lime' : '' %>"><%= @meals_count %></div>
+          <div class="stat-label">Repas scannés</div>
+        </td>
+        <td class="stat-cell">
+          <span class="stat-icon">🔥</span>
+          <div class="stat-value<%= @avg_kcal_day > 0 ? ' lime' : '' %>"><%= number_with_delimiter(@avg_kcal_day) %></div>
+          <div class="stat-label">Kcal/jour moy.</div>
+        </td>
+        <td class="stat-cell">
+          <span class="stat-icon">📸</span>
+          <div class="stat-value<%= @ai_analyses > 0 ? ' lime' : '' %>"><%= @ai_analyses %></div>
+          <div class="stat-label">Analyses IA</div>
+        </td>
+        <td class="stat-cell">
+          <span class="stat-icon">🤖</span>
+          <div class="stat-value<%= @ai_coach > 0 ? ' lime' : '' %>"><%= @ai_coach %></div>
+          <div class="stat-label">Messages coach</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Statut calorique -->
+    <% if @meals_count > 0 && @target_kcal > 0 %>
+      <div class="kcal-status <%= @kcal_status %>">
+        <div class="kcal-status-title <%= @kcal_status %>">
+          <% case @kcal_status %>
+          <% when :balanced %> ✅ Objectif atteint — <%= number_with_delimiter(@avg_kcal_day) %> kcal/j (cible : <%= number_with_delimiter(@target_kcal) %>)
+          <% when :deficit  %> 💙 Déficit de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
+          <% when :surplus  %> 🟠 Surplus de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
+          <% end %>
+        </div>
+        <div class="kcal-status-text">
+          <% case @kcal_status %>
+          <% when :balanced %> Vos apports sont alignés avec votre objectif. Continuez ainsi !
+          <% when :deficit  %> Vous consommez moins que votre objectif. Si c'est votre but, bravo ! Sinon, pensez à ajouter des collations riches en protéines.
+          <% when :surplus  %> Vous dépassez votre objectif quotidien. Essayez de réduire les portions ou d'ajouter une activité physique.
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Macros -->
+    <% if @meals_count > 0 %>
+      <div class="macros-section">
+        <div class="section-title">Macronutriments totaux sur la période</div>
+        <div class="macro-row">
+          <div class="macro-label">Protéines</div>
+          <div class="macro-bar-wrap">
+            <div class="macro-bar" style="width:<%= [(@total_protein / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#60a5fa"></div>
+          </div>
+          <div class="macro-value"><%= @total_protein %>g</div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-label">Glucides</div>
+          <div class="macro-bar-wrap">
+            <div class="macro-bar" style="width:<%= [(@total_carbs / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#f59e0b"></div>
+          </div>
+          <div class="macro-value"><%= @total_carbs %>g</div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-label">Lipides</div>
+          <div class="macro-bar-wrap">
+            <div class="macro-bar" style="width:<%= [(@total_fat / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#a78bfa"></div>
+          </div>
+          <div class="macro-value"><%= @total_fat %>g</div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Repas scannés -->
+    <% if @top_meals.any? %>
+      <div class="section-title">Aliments les plus caloriques de la période</div>
+      <div class="meals-section">
+        <% @top_meals.each do |meal| %>
+          <% result = meal['result'] || {} %>
+          <div class="meal-row">
+            <% if meal['thumbnailBase64'].present? %>
+              <img src="data:image/jpeg;base64,<%= meal['thumbnailBase64'] %>"
+                   class="meal-thumb" alt="<%= result['name'] %>">
+            <% else %>
+              <div class="meal-thumb-placeholder">🍽️</div>
+            <% end %>
+            <div style="flex:1">
+              <div class="meal-name">
+                <%= result['name'] || '—' %>
+                <% score = result['healthScore'].to_i %>
+                <% if score > 0 %>
+                  <span class="meal-score <%= score >= 7 ? 'score-high' : score >= 4 ? 'score-medium' : 'score-low' %>">
+                    <%= score %>/10
+                  </span>
+                <% end %>
+              </div>
+              <div class="meal-meta">
+                P: <%= result['protein']&.round || 0 %>g &middot;
+                G: <%= result['carbs']&.round   || 0 %>g &middot;
+                L: <%= result['fat']&.round     || 0 %>g
+              </div>
+            </div>
+            <div class="meal-kcal"><%= result['calories'] || 0 %> kcal</div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="no-data">Aucun repas scanné sur cette période.</div>
+    <% end %>
+
+    <!-- Progression corporelle -->
+    <div class="body-section">
+      <div class="section-title">Progression corporelle</div>
+      <% if @latest_weight %>
+        <div class="body-row">
+          <span class="body-key">Poids actuel</span>
+          <span class="body-val lime"><%= @latest_weight %> kg</span>
+        </div>
+        <% if @weight_delta %>
+          <div class="body-row">
+            <span class="body-key">Évolution</span>
+            <span class="body-val <%= @weight_delta < 0 ? 'green' : @weight_delta > 0 ? 'red' : '' %>">
+              <%= @weight_delta > 0 ? '+' : '' %><%= @weight_delta %> kg
+            </span>
+          </div>
+        <% end %>
+        <div class="body-row">
+          <span class="body-key">Mesures enregistrées</span>
+          <span class="body-val"><%= @body_entries_count %></span>
+        </div>
+      <% else %>
+        <div style="color:#4a4a6a;font-size:13px;padding:8px 0">Aucune mesure corporelle enregistrée.</div>
+      <% end %>
+      <% if @tdee > 0 %>
+        <div class="body-row">
+          <span class="body-key">Objectif TDEE</span>
+          <span class="body-val"><%= number_with_delimiter(@tdee) %> kcal/j</span>
+        </div>
+        <div class="body-row">
+          <span class="body-key">Régime</span>
+          <span class="body-val lime"><%= @diet_type %></span>
+        </div>
+        <div class="body-row">
+          <span class="body-key">Objectif</span>
+          <span class="body-val"><%= @goal %></span>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Activité IA -->
+    <div class="ai-section">
+      <div class="section-title">Activité IA sur la période</div>
+      <% bar_pct = case @activity_level
+                   when :inactive then 4
+                   when :low      then 25
+                   when :medium   then 60
+                   else                95
+                   end %>
+      <div class="activity-bar-wrap">
+        <div class="activity-bar" style="width:<%= bar_pct %>%"></div>
+      </div>
+      <div class="activity-meta">
+        <span>Inactif</span>
+        <span style="font-weight:700;color:<%= @activity_level == :inactive ? '#aaa' : '#5a8a00' %>">
+          <%= { inactive: "Aucune activité", low: "Débutant", medium: "Régulier", high: "Expert" }[@activity_level] %>
+        </span>
+        <span>Expert</span>
+      </div>
+      <p class="activity-msg">
+        <% case @activity_level %>
+        <% when :inactive %> Reprenez l'application ! Photographiez votre prochain repas pour rester dans vos objectifs.
+        <% when :low %>      Un bon début ! Essayez d'analyser au moins un repas par jour.
+        <% when :medium %>   Vous êtes sur la bonne voie. Maintenez ce rythme !
+        <% when :high %>     Impressionnant ! Vous faites partie des utilisateurs les plus engagés.
+        <% end %>
+      </p>
+    </div>
+
+    <!-- Avertissement expiration abonnement -->
+    <% if @expiry_warning %>
+      <div class="expiry-warning">
+        <div class="expiry-warning-title">⚠️ Votre abonnement expire bientôt</div>
+        <div class="expiry-warning-text">
+          Il vous reste <strong><%= @days_remaining %> jour<%= @days_remaining > 1 ? 's' : '' %></strong>
+          (expire le <%= @expires_at.strftime("%-d %B %Y") %>).
+          Renouvelez dès maintenant pour ne pas perdre votre accès.
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Conseil rotatif -->
+    <div class="tip">
+      <div class="tip-label">Conseil DietVision</div>
+      <div class="tip-text">
+        <% tips = [
+          "Photographiez vos repas dès qu'ils sont servis pour une analyse plus précise des portions.",
+          "Posez à votre coach IA des questions spécifiques comme \"Quel petit-déjeuner pour augmenter mes protéines ?\"",
+          "Analysez aussi vos snacks ! Les collations représentent souvent 20 à 30% de l'apport calorique journalier.",
+          "Consultez vos graphiques chaque semaine pour identifier vos tendances nutritionnelles.",
+          "Boire de l'eau avant chaque repas peut réduire l'apport calorique de 13% en moyenne.",
+          "Demandez à votre coach IA un plan de repas sur mesure adapté à vos objectifs du moment.",
+        ] %>
+        <%= tips[Date.today.cweek % tips.size] %>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <a href="https://dietvision.app" class="cta">Ouvrir DietVision</a>
+    </div>
+
+    <div class="divider"></div>
+
+    <p style="font-size:12px; color:#8080a0; text-align:center; margin-top:16px; line-height:1.6;">
+      Questions ? Écrivez-nous à
+      <a href="mailto:support@dietvision.app" style="color:#7070a0;">support@dietvision.app</a>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p class="footer-text">
+      Vous recevez ce rapport car vous avez un abonnement <strong><%= @plan.name %></strong> DietVision.<br>
+      &copy; <%= Date.current.year %> DietVision &middot;
+      <a href="https://dietvision.app" class="footer-link">dietvision.app</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

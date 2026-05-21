@@ -1,0 +1,433 @@
+<% content_for :title, "Données — #{@user.name}" %>
+
+<%# ── En-tête ──────────────────────────────────────────────────────────────── %>
+<div class="mb-6 flex items-center gap-4 flex-wrap">
+  <%= link_to admin_user_path(@user),
+        class: "flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors" do %>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Retour à <%= @user.name %>
+  <% end %>
+  <div class="flex-1"></div>
+  <div class="text-xs text-gray-600">ID #<%= @user.id %> · <%= @user.email %></div>
+</div>
+
+<div class="mb-5 flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 class="text-xl font-bold text-white">Données de <span style="color:#C8FF00"><%= @user.name %></span></h1>
+    <p class="text-sm text-gray-500 mt-0.5">Toutes les données synchronisées par l'utilisateur depuis l'application</p>
+  </div>
+  <%# Bouton "Tout supprimer" %>
+  <button type="button" onclick="openClearAllModal()"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors"
+          style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
+    </svg>
+    Tout supprimer
+  </button>
+</div>
+
+<%# ── Stat cards ──────────────────────────────────────────────────────────────── %>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <% [
+    { label: "Repas scannés",        value: @meals_data.length,    icon: "🍽️", color: "#C8FF00" },
+    { label: "Mesures corporelles",  value: @body_entries.length,  icon: "📏", color: "#60a5fa" },
+    { label: "Jours de planning",    value: @planning_data.length, icon: "📅", color: "#a78bfa" },
+    { label: "Profil IA",            value: @fitai_profile.empty? ? "Non configuré" : "Configuré", icon: "🤖", color: "#34d399" },
+  ].each do |stat| %>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <div class="text-2xl mb-1"><%= stat[:icon] %></div>
+      <div class="text-xl font-bold" style="color:<%= stat[:color] %>"><%= stat[:value] %></div>
+      <div class="text-xs text-gray-500 mt-0.5"><%= stat[:label] %></div>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Flash ──────────────────────────────────────────────────────────────────── %>
+<% if notice.present? %>
+  <div class="mb-4 p-3 bg-green-950 border border-green-800 rounded-lg text-green-400 text-sm"><%= notice %></div>
+<% end %>
+<% if alert.present? %>
+  <div class="mb-4 p-3 bg-red-950 border border-red-800 rounded-lg text-red-400 text-sm"><%= alert %></div>
+<% end %>
+
+<%# ── Section 1 : Repas scannés ──────────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-5 overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+    <div class="flex items-center gap-3">
+      <span class="text-lg">🍽️</span>
+      <div>
+        <div class="font-bold text-white text-sm">Repas scannés</div>
+        <div class="text-xs text-gray-500"><%= @meals_data.length %> repas enregistrés</div>
+      </div>
+    </div>
+    <% if @meals_data.any? %>
+      <button type="button" onclick="confirmClear('meals', 'les repas')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+              style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Supprimer
+      </button>
+    <% end %>
+  </div>
+
+  <% if @meals_data.empty? %>
+    <div class="px-5 py-8 text-center text-gray-600 text-sm">Aucun repas enregistré</div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="text-left px-5 py-2.5 font-medium">Date</th>
+            <th class="text-left px-4 py-2.5 font-medium">Aliment</th>
+            <th class="text-right px-4 py-2.5 font-medium">Kcal</th>
+            <th class="text-right px-4 py-2.5 font-medium">Protéines</th>
+            <th class="text-right px-4 py-2.5 font-medium">Glucides</th>
+            <th class="text-right px-4 py-2.5 font-medium">Lipides</th>
+            <th class="text-right px-4 py-2.5 font-medium">Score</th>
+            <th class="text-center px-4 py-2.5 font-medium">Photo</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <% @meals_data.last(50).reverse.each do |meal| %>
+            <% result = meal['result'] || {} %>
+            <tr class="hover:bg-gray-800/40 transition-colors">
+              <td class="px-5 py-2.5 text-gray-400 text-xs whitespace-nowrap">
+                <% begin
+                     dt = DateTime.parse(meal['date'].to_s)
+                     t = dt.strftime("%d/%m/%Y %H:%M")
+                   rescue
+                     t = meal['date'].to_s
+                   end %>
+                <%= t %>
+              </td>
+              <td class="px-4 py-2.5">
+                <div class="font-medium text-gray-100 text-sm"><%= result['name'] || '—' %></div>
+                <% if result['tip'].present? %>
+                  <div class="text-xs text-gray-600 truncate max-w-xs"><%= result['tip'] %></div>
+                <% end %>
+              </td>
+              <td class="px-4 py-2.5 text-right font-bold" style="color:#C8FF00">
+                <%= result['calories'] || 0 %>
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-300 text-xs">
+                <%= result['protein']&.round || 0 %>g
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-300 text-xs">
+                <%= result['carbs']&.round || 0 %>g
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-300 text-xs">
+                <%= result['fat']&.round || 0 %>g
+              </td>
+              <td class="px-4 py-2.5 text-right">
+                <% score = result['healthScore'].to_i %>
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style="background:<%= score >= 7 ? 'rgba(52,211,153,0.15)' : score >= 4 ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)' %>;
+                             color:<%= score >= 7 ? '#34d399' : score >= 4 ? '#fbbf24' : '#f87171' %>">
+                  <%= score %>/10
+                </span>
+              </td>
+              <td class="px-4 py-2.5 text-center">
+                <% if meal['thumbnailBase64'].present? %>
+                  <img src="data:image/jpeg;base64,<%= meal['thumbnailBase64'] %>"
+                       class="w-10 h-10 rounded-lg object-cover mx-auto border border-gray-700"
+                       loading="lazy"
+                       alt="<%= result['name'] %>">
+                <% else %>
+                  <span class="text-gray-700 text-lg">—</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if @meals_data.length > 50 %>
+      <div class="px-5 py-3 text-xs text-gray-600 border-t border-gray-800">
+        Affichage des 50 derniers repas sur <%= @meals_data.length %> au total
+      </div>
+    <% end %>
+  <% end %>
+</div>
+
+<%# ── Section 2 : Profil nutritionnel ────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-5 overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+    <div class="flex items-center gap-3">
+      <span class="text-lg">🤖</span>
+      <div>
+        <div class="font-bold text-white text-sm">Profil nutritionnel (FitAI)</div>
+        <div class="text-xs text-gray-500">Données de profil synchronisées depuis l'app</div>
+      </div>
+    </div>
+    <% if @fitai_profile.any? %>
+      <button type="button" onclick="confirmClear('fitai_profile', 'le profil nutritionnel')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+              style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Supprimer
+      </button>
+    <% end %>
+  </div>
+
+  <% if @fitai_profile.empty? %>
+    <div class="px-5 py-8 text-center text-gray-600 text-sm">Profil non configuré</div>
+  <% else %>
+    <div class="p-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <% profile_fields = {
+        "Prénom"          => @fitai_profile["name"],
+        "Âge"             => @fitai_profile["age"] ? "#{@fitai_profile['age']} ans" : nil,
+        "Sexe"            => @fitai_profile["sex"],
+        "Poids"           => @fitai_profile["weight"] ? "#{@fitai_profile['weight']} kg" : nil,
+        "Taille"          => @fitai_profile["height"] ? "#{@fitai_profile['height']} cm" : nil,
+        "Objectif"        => @fitai_profile["goal"],
+        "Activité"        => @fitai_profile["activityLevel"],
+        "Régime"          => @fitai_profile["dietType"],
+        "TDEE"            => @fitai_profile["tdee"] ? "#{@fitai_profile['tdee']&.round} kcal/j" : nil,
+        "Maintenance"     => @fitai_profile["maintenance"] ? "#{@fitai_profile['maintenance']&.round} kcal/j" : nil,
+        "Rythme"          => @fitai_profile["goalKgPerWeek"] ? "#{@fitai_profile['goalKgPerWeek']} kg/sem" : nil,
+        "Langue"          => @fitai_profile["locale"],
+        "Devise"          => @fitai_profile["currencyCode"],
+        "Pays"            => @fitai_profile["country"],
+      }.compact.reject { |_, v| v.blank? } %>
+
+      <% profile_fields.each do |key, val| %>
+        <div class="bg-gray-800/60 rounded-lg p-3 border border-gray-700/50">
+          <div class="text-xs text-gray-500 mb-1"><%= key %></div>
+          <div class="text-sm font-semibold text-white"><%= val %></div>
+        </div>
+      <% end %>
+
+      <% restrictions = @fitai_profile["restrictions"] %>
+      <% if restrictions.present? && restrictions.is_a?(Array) && restrictions.any? %>
+        <div class="col-span-2 bg-gray-800/60 rounded-lg p-3 border border-gray-700/50">
+          <div class="text-xs text-gray-500 mb-1">Restrictions alimentaires</div>
+          <div class="text-sm font-semibold text-white"><%= restrictions.join(", ") %></div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Section 3 : Mesures corporelles ────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-5 overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+    <div class="flex items-center gap-3">
+      <span class="text-lg">📏</span>
+      <div>
+        <div class="font-bold text-white text-sm">Mesures corporelles</div>
+        <div class="text-xs text-gray-500"><%= @body_entries.length %> entrées enregistrées</div>
+      </div>
+    </div>
+    <% if @body_entries.any? %>
+      <button type="button" onclick="confirmClear('body_entries', 'les mesures corporelles')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+              style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Supprimer
+      </button>
+    <% end %>
+  </div>
+
+  <% if @body_entries.empty? %>
+    <div class="px-5 py-8 text-center text-gray-600 text-sm">Aucune mesure enregistrée</div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="text-left px-5 py-2.5 font-medium">Date</th>
+            <th class="text-right px-4 py-2.5 font-medium">Poids (kg)</th>
+            <th class="text-right px-4 py-2.5 font-medium">Taille (cm)</th>
+            <th class="text-right px-4 py-2.5 font-medium">Tour taille</th>
+            <th class="text-right px-4 py-2.5 font-medium">Tour hanches</th>
+            <th class="text-right px-4 py-2.5 font-medium">Biceps</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <% @body_entries.last(30).reverse.each do |entry| %>
+            <tr class="hover:bg-gray-800/40 transition-colors">
+              <td class="px-5 py-2.5 text-gray-300 text-xs whitespace-nowrap"><%= entry['date'] %></td>
+              <td class="px-4 py-2.5 text-right font-bold" style="color:#C8FF00">
+                <%= entry['weight'] ? "#{entry['weight']} kg" : '—' %>
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs"><%= entry['height'] ? "#{entry['height']} cm" : '—' %></td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs"><%= entry['waist']  ? "#{entry['waist']} cm"  : '—' %></td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs"><%= entry['hips']   ? "#{entry['hips']} cm"   : '—' %></td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs"><%= entry['biceps'] ? "#{entry['biceps']} cm" : '—' %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Section 4 : Planning ────────────────────────────────────────────────────── %>
+<div class="bg-gray-900 rounded-xl border border-gray-800 mb-5 overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+    <div class="flex items-center gap-3">
+      <span class="text-lg">📅</span>
+      <div>
+        <div class="font-bold text-white text-sm">Planning nutritionnel</div>
+        <div class="text-xs text-gray-500"><%= @planning_data.length %> jours planifiés</div>
+      </div>
+    </div>
+    <% if @planning_data.any? %>
+      <button type="button" onclick="confirmClear('planning', 'le planning')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+              style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Supprimer
+      </button>
+    <% end %>
+  </div>
+
+  <% if @planning_data.empty? %>
+    <div class="px-5 py-8 text-center text-gray-600 text-sm">Aucun planning enregistré</div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="text-left px-5 py-2.5 font-medium">Date</th>
+            <th class="text-right px-4 py-2.5 font-medium">Kcal cible</th>
+            <th class="text-right px-4 py-2.5 font-medium">Protéines</th>
+            <th class="text-right px-4 py-2.5 font-medium">Glucides</th>
+            <th class="text-right px-4 py-2.5 font-medium">Lipides</th>
+            <th class="text-left px-4 py-2.5 font-medium">Note IA</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <% @planning_data.each do |day| %>
+            <tr class="hover:bg-gray-800/40 transition-colors">
+              <td class="px-5 py-2.5 text-gray-300 text-xs whitespace-nowrap"><%= day['date'] %></td>
+              <td class="px-4 py-2.5 text-right font-bold" style="color:#C8FF00">
+                <%= day['targetKcal'] || day['target_kcal'] %> kcal
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs">
+                <%= (day['targetProtein'] || day['target_protein']).to_i %>g
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs">
+                <%= (day['targetCarbs'] || day['target_carbs']).to_i %>g
+              </td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs">
+                <%= (day['targetFat'] || day['target_fat']).to_i %>g
+              </td>
+              <td class="px-4 py-2.5 text-gray-500 text-xs max-w-xs truncate">
+                <%= day['note'] %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>
+
+<%# ── Modale confirmation suppression ─────────────────────────────────────────── %>
+<div id="clear-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeClearModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-4">
+    <div class="bg-gray-900 border border-red-800/70 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-800 flex items-center gap-3">
+        <span class="flex items-center justify-center w-9 h-9 rounded-full bg-red-950 border border-red-800">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </span>
+        <div>
+          <h3 class="text-sm font-bold text-white">Confirmer la suppression</h3>
+          <p class="text-xs text-red-400 mt-0.5">Action irréversible</p>
+        </div>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-sm text-gray-300">Supprimer <span id="clear-label" class="font-bold text-white"></span> de <span class="text-[#C8FF00] font-semibold"><%= @user.name %></span> ?</p>
+        <p class="text-xs text-gray-500 mt-2">L'utilisateur devra reconfigurer ces données depuis l'application.</p>
+      </div>
+      <div class="px-5 pb-4 flex gap-2 justify-end">
+        <button type="button" onclick="closeClearModal()"
+                class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors">
+          Annuler
+        </button>
+        <button type="button" id="clear-confirm-btn"
+                class="px-5 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors">
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# Formulaire caché pour DELETE clear_data %>
+<%= form_with url: clear_data_admin_user_path(@user), method: :delete, id: "clear-form", local: true do |f| %>
+  <input type="hidden" name="data_type" id="clear-data-type">
+<% end %>
+
+<%# Modale "Tout supprimer" %>
+<div id="clear-all-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="document.getElementById('clear-all-modal').classList.add('hidden')"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-4">
+    <div class="bg-gray-900 border border-red-800/70 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-800">
+        <h3 class="text-sm font-bold text-white">⚠️ Supprimer TOUTES les données</h3>
+        <p class="text-xs text-red-400 mt-0.5">Repas, profil, mesures et planning — action irréversible</p>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-sm text-gray-300">Toutes les données de <span class="text-[#C8FF00] font-semibold"><%= @user.name %></span> seront supprimées.</p>
+      </div>
+      <div class="px-5 pb-4 flex gap-2 justify-end">
+        <button type="button" onclick="document.getElementById('clear-all-modal').classList.add('hidden')"
+                class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors">
+          Annuler
+        </button>
+        <button type="button" onclick="submitClear('all')"
+                class="px-5 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors">
+          Tout supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function confirmClear(type, label) {
+    document.getElementById('clear-label').textContent = label;
+    document.getElementById('clear-data-type').value  = type;
+    document.getElementById('clear-confirm-btn').onclick = () => submitClear(type);
+    document.getElementById('clear-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeClearModal() {
+    document.getElementById('clear-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function openClearAllModal() {
+    document.getElementById('clear-all-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function submitClear(type) {
+    document.getElementById('clear-data-type').value = type;
+    document.getElementById('clear-form').submit();
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeClearModal();
+      document.getElementById('clear-all-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+</script>

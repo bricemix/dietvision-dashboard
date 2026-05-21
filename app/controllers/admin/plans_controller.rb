@@ -1,6 +1,6 @@
 module Admin
   class PlansController < BaseController
-    before_action :set_plan, only: %i[edit update destroy activate deactivate sync_stripe]
+    before_action :set_plan, only: %i[edit update destroy activate deactivate sync_stripe send_report_test]
 
     def index
       @plans = Plan.order(:position, :id)
@@ -81,6 +81,23 @@ module Admin
       @plan.update!(status: "inactive")
       AdminLog.log(admin: current_admin, action: "deactivate_plan", resource: @plan, ip: request.remote_ip)
       redirect_to admin_plans_path, notice: "Plan désactivé"
+    end
+
+    # POST /admin/plans/:id/send_report_test
+    # Envoie un rapport test à l'adresse de l'admin connecté.
+    def send_report_test
+      # Trouver un utilisateur réel sur ce plan pour avoir des données, sinon prendre n'importe lequel
+      sample_user = User.where(plan: @plan.slug).order(created_at: :desc).first
+      sample_user ||= User.order(created_at: :desc).first
+
+      if sample_user
+        ReportMailer.nutrition_report(sample_user, @plan, test_recipient: current_admin.email).deliver_now
+        redirect_to edit_admin_plan_path(@plan),
+                    notice: "📤 Rapport test envoyé à #{current_admin.email} (données de #{sample_user.name})"
+      else
+        redirect_to edit_admin_plan_path(@plan),
+                    alert: "Aucun utilisateur disponible pour générer le rapport test."
+      end
     end
 
     # POST /admin/plans/:id/sync_stripe

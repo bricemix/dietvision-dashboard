@@ -283,27 +283,169 @@
     </div>
 
     <%# ── 2b. Rapports email automatiques ── %>
-    <div class="f-card">
+    <div class="f-card" id="email-report-card">
       <div class="f-section-title">
         2b — Rapports email automatiques
-        <span class="text-[10px] font-normal px-2 py-0.5 rounded" style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">Envoyé automatiquement aux abonnés</span>
+        <span class="text-[10px] font-normal px-2 py-0.5 rounded" style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">Envoyé aux abonnés de ce plan</span>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+
+      <%# Toggle ON/OFF %>
+      <% report_active = plan.email_report_frequency.present? && plan.email_report_frequency != 'never' %>
+      <div class="flex items-center justify-between mb-4 p-3 rounded-xl border"
+           style="background:#0d1117;border-color:<%= report_active ? 'rgba(200,255,0,0.3)' : '#1f2937' %>">
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Fréquence d'envoi</label>
-          <%= f.select :email_report_frequency,
-                [["Jamais (désactivé)", "never"], ["Quotidien", "daily"], ["Hebdomadaire", "weekly"], ["Mensuel", "monthly"]],
-                {}, class: "f-input" %>
+          <div class="text-sm font-semibold text-white">Rapports automatiques par email</div>
+          <div class="text-xs text-gray-500 mt-0.5">Tous les utilisateurs de ce plan recevront un rapport de suivi nutritionnel</div>
         </div>
-        <div id="email-report-day-wrapper">
-          <label class="block text-xs text-gray-400 mb-1">Jour d'envoi (si hebdomadaire)</label>
-          <%= f.select :email_report_day,
-                [["Lundi", "monday"], ["Mardi", "tuesday"], ["Mercredi", "wednesday"],
-                 ["Jeudi", "thursday"], ["Vendredi", "friday"], ["Samedi", "saturday"], ["Dimanche", "sunday"]],
-                {}, class: "f-input" %>
+        <label class="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+          <input type="checkbox" id="email-report-toggle"
+                 <%= report_active ? 'checked' : '' %>
+                 onchange="toggleEmailReport(this.checked)"
+                 class="sr-only">
+          <div id="toggle-track"
+               class="w-12 h-6 rounded-full transition-colors duration-200 relative"
+               style="background:<%= report_active ? '#C8FF00' : '#374151' %>">
+            <div id="toggle-thumb"
+                 class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+                 style="transform:translateX(<%= report_active ? '26px' : '2px' %>)"></div>
+          </div>
+        </label>
+      </div>
+
+      <%# Champ caché pour la valeur "never" quand toggle désactivé %>
+      <input type="hidden" name="plan[email_report_frequency]" id="email-report-freq-hidden"
+             value="<%= plan.email_report_frequency.presence || 'never' %>">
+
+      <%# Contenu affiché uniquement si activé %>
+      <div id="email-report-config" style="<%= report_active ? '' : 'display:none' %>">
+
+        <%# Fréquence — chips %>
+        <div class="mb-4">
+          <div class="text-xs text-gray-400 mb-2 font-semibold">Fréquence d'envoi</div>
+          <div class="flex gap-2 flex-wrap" id="freq-chips">
+            <% [["daily","Quotidien","📅"],["weekly","Hebdomadaire","📆"],["monthly","Mensuel","📊"]].each do |val, label, icon| %>
+              <button type="button"
+                      onclick="selectFreq('<%= val %>')"
+                      data-freq="<%= val %>"
+                      class="freq-chip flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-150 <%= plan.email_report_frequency == val ? 'freq-chip--active' : '' %>"
+                      style="<%= plan.email_report_frequency == val ? 'background:rgba(200,255,0,0.15);border-color:#C8FF00;color:#C8FF00' : 'background:#1f2937;border-color:#374151;color:#9ca3af' %>">
+                <span><%= icon %></span>
+                <span><%= label %></span>
+              </button>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Sélecteur de jour (hebdomadaire uniquement) %>
+        <div id="email-report-day-wrapper"
+             style="<%= plan.email_report_frequency == 'weekly' ? '' : 'display:none' %>;margin-bottom:16px">
+          <div class="text-xs text-gray-400 mb-2 font-semibold">Jour d'envoi</div>
+          <div class="flex gap-2 flex-wrap" id="day-chips">
+            <% [["monday","Lun"],["tuesday","Mar"],["wednesday","Mer"],["thursday","Jeu"],
+                ["friday","Ven"],["saturday","Sam"],["sunday","Dim"]].each do |val, label| %>
+              <button type="button"
+                      onclick="selectDay('<%= val %>')"
+                      data-day="<%= val %>"
+                      class="day-chip px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 <%= (plan.email_report_day || 'monday') == val ? 'day-chip--active' : '' %>"
+                      style="<%= (plan.email_report_day || 'monday') == val ? 'background:rgba(200,255,0,0.15);border-color:#C8FF00;color:#C8FF00' : 'background:#1f2937;border-color:#374151;color:#9ca3af' %>">
+                <%= label %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+        <input type="hidden" name="plan[email_report_day]" id="email-report-day-hidden"
+               value="<%= plan.email_report_day.presence || 'monday' %>">
+
+        <%# Prévisualisation du contenu du rapport %>
+        <div class="rounded-xl border border-gray-700 overflow-hidden mb-4" style="background:#0d1117">
+          <div class="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
+            <span class="text-sm">📧</span>
+            <span class="text-xs font-bold text-gray-300">Contenu du rapport envoyé</span>
+            <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold"
+                  style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">
+              Automatique
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-0 divide-x divide-gray-800">
+            <div class="p-4 space-y-3">
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">🔥</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Calories & Macros</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">Kcal consommées, protéines, glucides, lipides vs objectif</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">🍽️</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Repas scannés</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">Liste des derniers aliments analysés avec photo et score santé</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">📏</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Progression corporelle</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">Évolution du poids, tour de taille et autres mesures</div>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 space-y-3">
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">🤖</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Activité IA</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">Nombre d'analyses, messages coach, plats générés</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">🎯</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Objectifs & Tendances</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">TDEE, déficit/surplus, tendance vs période précédente</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-2.5">
+                <span class="text-base flex-shrink-0">💡</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Conseil personnalisé</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">Tip nutritionnel rotatif + rappel de renouvellement si proche expiration</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%# Bouton "Envoyer un test" %>
+        <% if !plan.new_record? %>
+          <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-700" style="background:#0d1117">
+            <div class="flex-1">
+              <div class="text-xs font-semibold text-white">Tester l'envoi</div>
+              <div class="text-[11px] text-gray-500 mt-0.5">Envoie un rapport test à votre adresse admin</div>
+            </div>
+            <%= link_to "📤 Envoyer un test", send_report_test_admin_plan_path(plan),
+                  method: :post,
+                  class: "flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors",
+                  style: "background:rgba(200,255,0,0.1);color:#C8FF00;border-color:rgba(200,255,0,0.3)",
+                  data: { confirm: "Envoyer un rapport test à #{current_admin.email} ?" } %>
+          </div>
+        <% else %>
+          <p class="text-xs text-gray-600 italic">💡 Sauvegardez le plan pour pouvoir envoyer un test.</p>
+        <% end %>
+
+      </div><%# /email-report-config %>
+
+      <%# Message quand désactivé %>
+      <div id="email-report-disabled-msg" style="<%= report_active ? 'display:none' : '' %>">
+        <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-800" style="background:#0a0a0f">
+          <span class="text-2xl">🔕</span>
+          <div>
+            <div class="text-xs font-semibold text-gray-400">Rapports désactivés pour ce plan</div>
+            <div class="text-[11px] text-gray-600 mt-0.5">Activez le toggle pour configurer l'envoi automatique de rapports nutritionnels.</div>
+          </div>
         </div>
       </div>
-      <p class="text-xs text-gray-600 mt-2">Le rapport inclut : progressions corporelles, repas analysés, activité IA, statistiques de la période.</p>
+
     </div>
 
     <%# ── 3. Stripe ── %>
@@ -1141,17 +1283,58 @@
     }
   }
 
-  // ── Email report frequency toggle ─────────────────────────
-  (function() {
-    const freqSel = document.querySelector('select[name="plan[email_report_frequency]"]');
-    const dayWrap = document.getElementById('email-report-day-wrapper');
-    if (!freqSel || !dayWrap) return;
-    function toggleDay() {
-      dayWrap.style.display = freqSel.value === 'weekly' ? '' : 'none';
+  // ── Email report — toggle ON/OFF ─────────────────────────
+  function toggleEmailReport(active) {
+    const config  = document.getElementById('email-report-config');
+    const disabledMsg = document.getElementById('email-report-disabled-msg');
+    const track   = document.getElementById('toggle-track');
+    const thumb   = document.getElementById('toggle-thumb');
+    const card    = document.getElementById('email-report-card');
+    const hidden  = document.getElementById('email-report-freq-hidden');
+
+    if (active) {
+      config.style.display = '';
+      disabledMsg.style.display = 'none';
+      track.style.background = '#C8FF00';
+      thumb.style.transform  = 'translateX(26px)';
+      // Appliquer la fréquence couramment sélectionnée ou 'weekly' par défaut
+      const currentFreq = document.querySelector('.freq-chip--active')?.dataset.freq || 'weekly';
+      hidden.value = currentFreq;
+      if (!document.querySelector('.freq-chip--active')) selectFreq('weekly');
+    } else {
+      config.style.display = 'none';
+      disabledMsg.style.display = '';
+      track.style.background = '#374151';
+      thumb.style.transform  = 'translateX(2px)';
+      hidden.value = 'never';
     }
-    freqSel.addEventListener('change', toggleDay);
-    toggleDay();
-  })();
+  }
+
+  // ── Sélection de la fréquence ─────────────────────────────
+  function selectFreq(freq) {
+    document.querySelectorAll('.freq-chip').forEach(btn => {
+      const isActive = btn.dataset.freq === freq;
+      btn.style.background    = isActive ? 'rgba(200,255,0,0.15)' : '#1f2937';
+      btn.style.borderColor   = isActive ? '#C8FF00' : '#374151';
+      btn.style.color         = isActive ? '#C8FF00' : '#9ca3af';
+      btn.classList.toggle('freq-chip--active', isActive);
+    });
+    document.getElementById('email-report-freq-hidden').value = freq;
+    const dayWrapper = document.getElementById('email-report-day-wrapper');
+    if (dayWrapper) dayWrapper.style.display = freq === 'weekly' ? '' : 'none';
+  }
+
+  // ── Sélection du jour (hebdomadaire) ──────────────────────
+  function selectDay(day) {
+    document.querySelectorAll('.day-chip').forEach(btn => {
+      const isActive = btn.dataset.day === day;
+      btn.style.background  = isActive ? 'rgba(200,255,0,0.15)' : '#1f2937';
+      btn.style.borderColor = isActive ? '#C8FF00' : '#374151';
+      btn.style.color       = isActive ? '#C8FF00' : '#9ca3af';
+      btn.classList.toggle('day-chip--active', isActive);
+    });
+    document.getElementById('email-report-day-hidden').value = day;
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     // Charger les devises existantes du plan en mode édition

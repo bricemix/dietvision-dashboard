@@ -81,6 +81,8 @@ Rails.application.routes.draw do
         post   :extend_subscription
         post   :gift_access
         delete :destroy
+        get    :data           # Voir toutes les données de l'utilisateur
+        delete :clear_data     # Supprimer un type de données
       end
       collection do
         delete :destroy_all
@@ -93,6 +95,7 @@ Rails.application.routes.draw do
         post :activate
         post :deactivate
         post :sync_stripe
+        post :send_report_test   # Envoyer un rapport test à l'admin
       end
       collection do
         post :sync_all_stripe

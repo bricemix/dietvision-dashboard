@@ -54,6 +54,23 @@
             <div class="text-sm text-gray-500 mt-1"><%= plan.description %></div>
           <% end %>
 
+          <%# Email report badge -%>
+          <% if plan.email_report_frequency.present? && plan.email_report_frequency != 'never' %>
+            <div class="mt-1 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.25)">
+                <span>📧</span>
+                <span>Rapport <%= Plan::EMAIL_FREQUENCY_LABELS[plan.email_report_frequency]&.downcase %>
+                  <% if plan.email_report_frequency == 'weekly' %>
+                    · <%= { 'monday' => 'Lun', 'tuesday' => 'Mar', 'wednesday' => 'Mer',
+                            'thursday' => 'Jeu', 'friday' => 'Ven', 'saturday' => 'Sam', 'sunday' => 'Dim'
+                           }[plan.email_report_day] || plan.email_report_day %>
+                  <% end %>
+                </span>
+              </span>
+            </div>
+          <% end %>
+
           <%# Stripe status -%>
           <div class="mt-1 flex items-center gap-2">
             <% if plan.stripe_price_id.present? %>

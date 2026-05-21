@@ -334,6 +334,10 @@
               <%= link_to "Voir", admin_user_path(user),
                     class: "text-xs lime hover:underline",
                     onclick: "event.stopPropagation()" %>
+              <%= link_to "Data", data_admin_user_path(user),
+                    class: "text-xs text-blue-400 hover:text-blue-300 hover:underline transition-colors",
+                    title: "Voir les données (repas, profil, mesures, planning)",
+                    onclick: "event.stopPropagation()" %>
               <% if user.status == "active" %>
                 <%= button_to "Suspendre", suspend_admin_user_path(user), method: :post,
                       class: "text-xs text-red-400 hover:underline bg-transparent border-0 cursor-pointer p-0",
