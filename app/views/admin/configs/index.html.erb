@@ -269,6 +269,54 @@
       </div>
     </div>
 
+    <%# ── Emails — Liens & Deep links ──────────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">📧 Emails — Liens & Deep links</h2>
+      <p class="text-xs text-gray-600 mb-3">URLs utilisées dans les boutons d'action des emails envoyés aux utilisateurs. Laissez vide pour utiliser la valeur par défaut.</p>
+      <div class="space-y-4">
+        <% %w[email_app_url email_scan_deeplink email_measures_deeplink email_coach_deeplink].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <% placeholders = {
+               "email_app_url"            => "https://dietvision.app",
+               "email_scan_deeplink"      => "https://dietvision.app ou dietvision://scan",
+               "email_measures_deeplink"  => "https://dietvision.app ou dietvision://measures",
+               "email_coach_deeplink"     => "https://dietvision.app ou dietvision://coach"
+             } %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+            <input type="text" name="configs[<%= key %>]"
+                   value="<%= cfg[:value] %>"
+                   placeholder="<%= placeholders[key] %>"
+                   class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono">
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── Emails — Conseils personnalisés ──────────────────── %>
+    <div>
+      <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">💡 Emails — Conseil du rapport</h2>
+      <p class="text-xs text-gray-600 mb-3">Texte affiché dans la section « Conseil DietVision » du rapport envoyé aux utilisateurs. Un conseil par langue. Laissez vide pour utiliser le conseil par défaut.</p>
+      <div class="space-y-4">
+        <% %w[email_report_tip_fr email_report_tip_en email_report_tip_de email_report_tip_es].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <% flags = { "email_report_tip_fr" => "🇫🇷", "email_report_tip_en" => "🇺🇸 🇬🇧", "email_report_tip_de" => "🇩🇪", "email_report_tip_es" => "🇪🇸" } %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1">
+              <span class="mr-1"><%= flags[key] %></span> <%= cfg[:description] || cfg[:key] %>
+            </label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+            <textarea name="configs[<%= key %>]" rows="3"
+                      placeholder="Laissez vide pour utiliser le conseil rotatif par défaut…"
+                      class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 resize-y"><%= cfg[:value] %></textarea>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
     <div class="flex items-center gap-4 pt-2">
       <%= f.submit "💾 Sauvegarder la configuration",
             class: "px-6 py-2.5 btn-primary rounded-lg text-sm cursor-pointer transition-colors" %>

@@ -350,8 +350,51 @@ class ReportMailer < ApplicationMailer
     @t = REPORT_T[@locale]
 
     # ── Période label ─────────────────────────────────────────────────────
-    @period_label = period_label(plan)
+    @period_label   = period_label(plan)
+    @period_start   = period_start_for(plan).strftime("%-d %b")
+    @period_end     = Date.current.strftime("%-d %b %Y")
     @frequency_label = Plan::EMAIL_FREQUENCY_LABELS[plan.email_report_frequency] || plan.email_report_frequency
+
+    # ── Meilleur repas (score santé le plus élevé) ────────────────────────
+    @best_meal = @period_meals
+      .max_by { |m| (m.dig('result', 'healthScore') || 0).to_i }
+      &.dig('result', 'name') || '—'
+
+    # ── Macros % pour le donut SVG ────────────────────────────────────────
+    total_macro_kcal = (@total_protein * 4) + (@total_carbs * 4) + (@total_fat * 9)
+    if total_macro_kcal > 0
+      @prot_pct  = ((@total_protein * 4.0 / total_macro_kcal) * 100).round
+      @carbs_pct = ((@total_carbs  * 4.0 / total_macro_kcal) * 100).round
+      @fat_pct   = 100 - @prot_pct - @carbs_pct
+      circ = 276.46
+      @prot_dash  = (@prot_pct  / 100.0 * circ).round(1)
+      @carbs_dash = (@carbs_pct / 100.0 * circ).round(1)
+      @fat_dash   = (@fat_pct   / 100.0 * circ).round(1)
+      @prot_offset  = 0
+      @carbs_offset = -@prot_dash
+      @fat_offset   = -(@prot_dash + @carbs_dash)
+    else
+      @prot_pct = @carbs_pct = @fat_pct = 0
+      @prot_dash = @carbs_dash = @fat_dash = 0
+      @prot_offset = @carbs_offset = @fat_offset = 0
+    end
+
+    # ── Checkpoints poids (jusqu'à 4 points pour le graphe) ─────────────
+    @weight_checkpoints = (parse_json_array(user.body_entries_data)
+      .select { |e| e['weight'].present? && e['date'].present? }
+      .sort_by { |e| e['date'].to_s }
+      .last(4))
+
+    # ── URLs configurables depuis AppConfig ───────────────────────────────
+    default_url    = AppConfig.get("email_app_url").presence || "https://dietvision.app"
+    @url_app       = default_url
+    @url_scan      = AppConfig.get("email_scan_deeplink").presence      || default_url
+    @url_measures  = AppConfig.get("email_measures_deeplink").presence  || default_url
+    @url_coach     = AppConfig.get("email_coach_deeplink").presence     || default_url
+
+    # ── Conseil configurable (AppConfig > REPORT_T par défaut) ────────────
+    tip_key = "email_report_tip_#{@locale == 'us' ? 'en' : @locale}"
+    @report_tip = AppConfig.get(tip_key).presence || @t[:tips][Date.today.cweek % @t[:tips].size]
 
     # ── Expéditeur et destinataire ────────────────────────────────────────
     to_address = test_recipient.presence || "#{user.name} <#{user.email}>"

@@ -12,9 +12,18 @@ class AppConfig < ApplicationRecord
     trial_period_days
     app_name
     support_email
+    report_sender_email
     stripe_publishable_key
     stripe_secret_key
     stripe_webhook_secret
+    email_app_url
+    email_scan_deeplink
+    email_measures_deeplink
+    email_coach_deeplink
+    email_report_tip_fr
+    email_report_tip_en
+    email_report_tip_de
+    email_report_tip_es
   ].freeze
 
   # BUG-12 : cache pour éviter 2-4 requêtes SQL par request API

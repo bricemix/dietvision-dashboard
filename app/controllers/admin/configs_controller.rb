@@ -166,11 +166,19 @@ module Admin
         "trial_enabled"            => "Activer la période d'essai pour les nouveaux inscrits (1 = oui, 0 = non)",
         "trial_period_days"        => "Durée de la période d'essai (en jours)",
         "app_name"                 => "Nom de l'application",
-        "support_email"            => "Email support",
+        "support_email"            => "Email support affiché dans les emails",
         "report_sender_email"      => "Email expéditeur des rapports (ex: rapports@diet-vision.com)",
         "stripe_publishable_key"   => "Stripe — Publishable key (pk_live_... ou pk_test_...)",
         "stripe_secret_key"        => "Stripe — Secret key (sk_live_... ou sk_test_...)",
-        "stripe_webhook_secret"    => "Stripe — Webhook signing secret (whsec_...)"
+        "stripe_webhook_secret"    => "Stripe — Webhook signing secret (whsec_...)",
+        "email_app_url"            => "URL principale de l'app dans les emails (bouton CTA)",
+        "email_scan_deeplink"      => "Deep link bouton « Scanner un repas » (ex: dietvision://scan)",
+        "email_measures_deeplink"  => "Deep link bouton « Ajouter mes mesures » (ex: dietvision://measures)",
+        "email_coach_deeplink"     => "Deep link bouton « Coach IA » (ex: dietvision://coach)",
+        "email_report_tip_fr"      => "Conseil affiché dans le rapport — version française",
+        "email_report_tip_en"      => "Conseil affiché dans le rapport — version anglaise (us/en)",
+        "email_report_tip_de"      => "Conseil affiché dans le rapport — version allemande",
+        "email_report_tip_es"      => "Conseil affiché dans le rapport — version espagnole",
       }[key]
     end
   end
