@@ -423,11 +423,11 @@
               <div class="text-xs font-semibold text-white">Tester l'envoi</div>
               <div class="text-[11px] text-gray-500 mt-0.5">Envoie un rapport test à votre adresse admin</div>
             </div>
-            <%= link_to "📤 Envoyer un test", send_report_test_admin_plan_path(plan),
+            <%= button_to "📤 Envoyer un test", send_report_test_admin_plan_path(plan),
                   method: :post,
-                  class: "flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors",
+                  class: "flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors cursor-pointer",
                   style: "background:rgba(200,255,0,0.1);color:#C8FF00;border-color:rgba(200,255,0,0.3)",
-                  data: { confirm: "Envoyer un rapport test à #{current_admin.email} ?" } %>
+                  data: { turbo_confirm: "Envoyer un rapport test à #{current_admin.email} ?" } %>
           </div>
         <% else %>
           <p class="text-xs text-gray-600 italic">💡 Sauvegardez le plan pour pouvoir envoyer un test.</p>
