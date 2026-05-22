@@ -90,6 +90,7 @@ class ReportMailer < ApplicationMailer
     sender = AppConfig.get("report_sender_email").presence ||
              AppConfig.get("support_email").presence ||
              "DietVision <noreply@diet-vision.com>"
+    # sender est déjà défini via application_mailer si non surchargé
 
     mail(
       to:      to_address,
