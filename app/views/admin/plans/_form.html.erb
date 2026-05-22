@@ -423,11 +423,12 @@
               <div class="text-xs font-semibold text-white">Tester l'envoi</div>
               <div class="text-[11px] text-gray-500 mt-0.5">Envoie un rapport test à votre adresse admin</div>
             </div>
-            <%= button_to "📤 Envoyer un test", send_report_test_admin_plan_path(plan),
-                  method: :post,
-                  class: "flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors cursor-pointer",
-                  style: "background:rgba(200,255,0,0.1);color:#C8FF00;border-color:rgba(200,255,0,0.3)",
-                  data: { turbo_confirm: "Envoyer un rapport test à #{current_admin.email} ?" } %>
+            <button type="button"
+                    onclick="if(confirm('Envoyer un rapport test à <%= current_admin.email %> ?')){var f=document.createElement('form');f.method='POST';f.action='<%= send_report_test_admin_plan_path(plan) %>';var t=document.createElement('input');t.type='hidden';t.name='authenticity_token';t.value='<%= form_authenticity_token %>';f.appendChild(t);document.body.appendChild(f);f.submit();}"
+                    class="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors cursor-pointer"
+                    style="background:rgba(200,255,0,0.1);color:#C8FF00;border-color:rgba(200,255,0,0.3)">
+              📤 Envoyer un test
+            </button>
           </div>
         <% else %>
           <p class="text-xs text-gray-600 italic">💡 Sauvegardez le plan pour pouvoir envoyer un test.</p>
