@@ -255,7 +255,7 @@
     <div>
       <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Application</h2>
       <div class="space-y-4">
-        <% %w[app_name support_email].each do |key| %>
+        <% %w[app_name support_email report_sender_email].each do |key| %>
           <% cfg = @configs.find { |c| c[:key] == key } %>
           <% next unless cfg %>
           <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">

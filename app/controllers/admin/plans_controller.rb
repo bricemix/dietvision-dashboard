@@ -84,16 +84,19 @@ module Admin
     end
 
     # POST /admin/plans/:id/send_report_test
-    # Envoie un rapport test à l'adresse de l'admin connecté.
+    # Envoie un rapport test à l'adresse choisie dans le modal.
     def send_report_test
+      # Email destinataire : param du formulaire modal > email admin connecté
+      recipient = params[:test_email].presence || current_admin.email
+
       # Trouver un utilisateur réel sur ce plan pour avoir des données, sinon prendre n'importe lequel
       sample_user = User.where(plan: @plan.slug).order(created_at: :desc).first
       sample_user ||= User.order(created_at: :desc).first
 
       if sample_user
-        ReportMailer.nutrition_report(sample_user, @plan, test_recipient: current_admin.email).deliver_now
+        ReportMailer.nutrition_report(sample_user, @plan, test_recipient: recipient).deliver_now
         redirect_to edit_admin_plan_path(@plan),
-                    notice: "📤 Rapport test envoyé à #{current_admin.email} (données de #{sample_user.name})"
+                    notice: "📤 Rapport test envoyé à #{recipient} (données de #{sample_user.name})"
       else
         redirect_to edit_admin_plan_path(@plan),
                     alert: "Aucun utilisateur disponible pour générer le rapport test."

@@ -87,9 +87,13 @@ class ReportMailer < ApplicationMailer
     # ── Expéditeur et destinataire ────────────────────────────────────────
     to_address = test_recipient.presence || "#{user.name} <#{user.email}>"
     subject_prefix = test_recipient.present? ? "[TEST] " : ""
+    sender = AppConfig.get("report_sender_email").presence ||
+             AppConfig.get("support_email").presence ||
+             "DietVision <noreply@diet-vision.com>"
 
     mail(
       to:      to_address,
+      from:    sender,
       subject: "#{subject_prefix}#{subject_for(plan)} — #{@period_label}"
     )
   end

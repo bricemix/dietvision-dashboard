@@ -167,6 +167,7 @@ module Admin
         "trial_period_days"        => "Durée de la période d'essai (en jours)",
         "app_name"                 => "Nom de l'application",
         "support_email"            => "Email support",
+        "report_sender_email"      => "Email expéditeur des rapports (ex: rapports@diet-vision.com)",
         "stripe_publishable_key"   => "Stripe — Publishable key (pk_live_... ou pk_test_...)",
         "stripe_secret_key"        => "Stripe — Secret key (sk_live_... ou sk_test_...)",
         "stripe_webhook_secret"    => "Stripe — Webhook signing secret (whsec_...)"
