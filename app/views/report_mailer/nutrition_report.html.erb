@@ -199,17 +199,15 @@
     <% if @meals_count > 0 && @target_kcal > 0 %>
       <div class="kcal-status <%= @kcal_status %>">
         <div class="kcal-status-title <%= @kcal_status %>">
-          <% case @kcal_status %>
-          <% when :balanced %> ✅ Objectif atteint — <%= number_with_delimiter(@avg_kcal_day) %> kcal/j (cible : <%= number_with_delimiter(@target_kcal) %>)
-          <% when :deficit  %> 💙 Déficit de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
-          <% when :surplus  %> 🟠 Surplus de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
+          <% if @kcal_status == :balanced %> ✅ Objectif atteint — <%= number_with_delimiter(@avg_kcal_day) %> kcal/j (cible : <%= number_with_delimiter(@target_kcal) %>)
+          <% elsif @kcal_status == :deficit %> 💙 Déficit de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
+          <% elsif @kcal_status == :surplus %> 🟠 Surplus de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
           <% end %>
         </div>
         <div class="kcal-status-text">
-          <% case @kcal_status %>
-          <% when :balanced %> Vos apports sont alignés avec votre objectif. Continuez ainsi !
-          <% when :deficit  %> Vous consommez moins que votre objectif. Si c'est votre but, bravo ! Sinon, pensez à ajouter des collations riches en protéines.
-          <% when :surplus  %> Vous dépassez votre objectif quotidien. Essayez de réduire les portions ou d'ajouter une activité physique.
+          <% if @kcal_status == :balanced %> Vos apports sont alignés avec votre objectif. Continuez ainsi !
+          <% elsif @kcal_status == :deficit %> Vous consommez moins que votre objectif. Si c'est votre but, bravo ! Sinon, pensez à ajouter des collations riches en protéines.
+          <% elsif @kcal_status == :surplus %> Vous dépassez votre objectif quotidien. Essayez de réduire les portions ou d'ajouter une activité physique.
           <% end %>
         </div>
       </div>
@@ -339,11 +337,10 @@
         <span>Expert</span>
       </div>
       <p class="activity-msg">
-        <% case @activity_level %>
-        <% when :inactive %> Reprenez l'application ! Photographiez votre prochain repas pour rester dans vos objectifs.
-        <% when :low %>      Un bon début ! Essayez d'analyser au moins un repas par jour.
-        <% when :medium %>   Vous êtes sur la bonne voie. Maintenez ce rythme !
-        <% when :high %>     Impressionnant ! Vous faites partie des utilisateurs les plus engagés.
+        <% if @activity_level == :inactive %> Reprenez l'application ! Photographiez votre prochain repas pour rester dans vos objectifs.
+        <% elsif @activity_level == :low %>      Un bon début ! Essayez d'analyser au moins un repas par jour.
+        <% elsif @activity_level == :medium %>   Vous êtes sur la bonne voie. Maintenez ce rythme !
+        <% elsif @activity_level == :high %>     Impressionnant ! Vous faites partie des utilisateurs les plus engagés.
         <% end %>
       </p>
     </div>
