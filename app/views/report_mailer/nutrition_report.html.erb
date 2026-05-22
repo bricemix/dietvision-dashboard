@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<%= @t[:lang] %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,42 +155,42 @@
   <!-- Body -->
   <div class="body">
 
-    <p class="greeting">Bonjour <%= @user.name %> 👋</p>
+    <p class="greeting"><%= @t[:greeting] %> <%= @user.name %> 👋</p>
     <p class="subtitle">
       <% if @meals_count == 0 %>
-        Vous n'avez enregistré aucun repas sur cette période. Reprenez dès aujourd'hui pour suivre votre progression nutritionnelle !
+        <%= @t[:subtitle_no_meals] %>
       <% elsif @kcal_status == :balanced %>
-        Excellente semaine — vos apports caloriques sont parfaitement équilibrés. Voici votre bilan complet.
+        <%= @t[:subtitle_balanced] %>
       <% elsif @kcal_status == :deficit %>
-        Vous êtes en déficit calorique cette période. Bon travail si c'est votre objectif ! Voici votre bilan.
+        <%= @t[:subtitle_deficit] %>
       <% else %>
-        Voici votre bilan nutritionnel de la période. Continuez à suivre vos repas pour rester dans vos objectifs.
+        <%= @t[:subtitle_default] %>
       <% end %>
     </p>
 
     <!-- Stats 4 colonnes -->
-    <div class="section-title">Chiffres clés de la période</div>
+    <div class="section-title"><%= @t[:section_key_stats] %></div>
     <table class="stats-row">
       <tr>
         <td class="stat-cell">
           <span class="stat-icon">🍽️</span>
           <div class="stat-value<%= @meals_count > 0 ? ' lime' : '' %>"><%= @meals_count %></div>
-          <div class="stat-label">Repas scannés</div>
+          <div class="stat-label"><%= @t[:label_meals] %></div>
         </td>
         <td class="stat-cell">
           <span class="stat-icon">🔥</span>
           <div class="stat-value<%= @avg_kcal_day > 0 ? ' lime' : '' %>"><%= number_with_delimiter(@avg_kcal_day) %></div>
-          <div class="stat-label">Kcal/jour moy.</div>
+          <div class="stat-label"><%= @t[:label_kcal] %></div>
         </td>
         <td class="stat-cell">
           <span class="stat-icon">📸</span>
           <div class="stat-value<%= @ai_analyses > 0 ? ' lime' : '' %>"><%= @ai_analyses %></div>
-          <div class="stat-label">Analyses IA</div>
+          <div class="stat-label"><%= @t[:label_ai] %></div>
         </td>
         <td class="stat-cell">
           <span class="stat-icon">🤖</span>
           <div class="stat-value<%= @ai_coach > 0 ? ' lime' : '' %>"><%= @ai_coach %></div>
-          <div class="stat-label">Messages coach</div>
+          <div class="stat-label"><%= @t[:label_coach] %></div>
         </td>
       </tr>
     </table>
@@ -199,15 +199,15 @@
     <% if @meals_count > 0 && @target_kcal > 0 %>
       <div class="kcal-status <%= @kcal_status %>">
         <div class="kcal-status-title <%= @kcal_status %>">
-          <% if @kcal_status == :balanced %> ✅ Objectif atteint — <%= number_with_delimiter(@avg_kcal_day) %> kcal/j (cible : <%= number_with_delimiter(@target_kcal) %>)
-          <% elsif @kcal_status == :deficit %> 💙 Déficit de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
-          <% elsif @kcal_status == :surplus %> 🟠 Surplus de <%= @kcal_diff %> kcal/j (<%= number_with_delimiter(@avg_kcal_day) %> vs objectif <%= number_with_delimiter(@target_kcal) %>)
+          <% if @kcal_status == :balanced %> <%= @t[:kcal_balanced] %> — <%= number_with_delimiter(@avg_kcal_day) %> <%= @t[:kcal_day] %> (<%= @t[:kcal_target] %> <%= number_with_delimiter(@target_kcal) %>)
+          <% elsif @kcal_status == :deficit %> <%= @t[:kcal_deficit] %> <%= @kcal_diff %> <%= @t[:kcal_day] %> (<%= number_with_delimiter(@avg_kcal_day) %> <%= @t[:kcal_vs] %> <%= number_with_delimiter(@target_kcal) %>)
+          <% elsif @kcal_status == :surplus %> <%= @t[:kcal_surplus] %> <%= @kcal_diff %> <%= @t[:kcal_day] %> (<%= number_with_delimiter(@avg_kcal_day) %> <%= @t[:kcal_vs] %> <%= number_with_delimiter(@target_kcal) %>)
           <% end %>
         </div>
         <div class="kcal-status-text">
-          <% if @kcal_status == :balanced %> Vos apports sont alignés avec votre objectif. Continuez ainsi !
-          <% elsif @kcal_status == :deficit %> Vous consommez moins que votre objectif. Si c'est votre but, bravo ! Sinon, pensez à ajouter des collations riches en protéines.
-          <% elsif @kcal_status == :surplus %> Vous dépassez votre objectif quotidien. Essayez de réduire les portions ou d'ajouter une activité physique.
+          <% if @kcal_status == :balanced %> <%= @t[:kcal_text_balanced] %>
+          <% elsif @kcal_status == :deficit %> <%= @t[:kcal_text_deficit] %>
+          <% elsif @kcal_status == :surplus %> <%= @t[:kcal_text_surplus] %>
           <% end %>
         </div>
       </div>
@@ -216,23 +216,23 @@
     <!-- Macros -->
     <% if @meals_count > 0 %>
       <div class="macros-section">
-        <div class="section-title">Macronutriments totaux sur la période</div>
+        <div class="section-title"><%= @t[:section_macros] %></div>
         <div class="macro-row">
-          <div class="macro-label">Protéines</div>
+          <div class="macro-label"><%= @t[:macro_protein] %></div>
           <div class="macro-bar-wrap">
             <div class="macro-bar" style="width:<%= [(@total_protein / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#60a5fa"></div>
           </div>
           <div class="macro-value"><%= @total_protein %>g</div>
         </div>
         <div class="macro-row">
-          <div class="macro-label">Glucides</div>
+          <div class="macro-label"><%= @t[:macro_carbs] %></div>
           <div class="macro-bar-wrap">
             <div class="macro-bar" style="width:<%= [(@total_carbs / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#f59e0b"></div>
           </div>
           <div class="macro-value"><%= @total_carbs %>g</div>
         </div>
         <div class="macro-row">
-          <div class="macro-label">Lipides</div>
+          <div class="macro-label"><%= @t[:macro_fat] %></div>
           <div class="macro-bar-wrap">
             <div class="macro-bar" style="width:<%= [(@total_fat / [@total_protein, @total_carbs, @total_fat].max * 100), 100].min.round %>%;background:#a78bfa"></div>
           </div>
@@ -243,7 +243,7 @@
 
     <!-- Repas scannés -->
     <% if @top_meals.any? %>
-      <div class="section-title">Aliments les plus caloriques de la période</div>
+      <div class="section-title"><%= @t[:section_top_meals] %></div>
       <div class="meals-section">
         <% @top_meals.each do |meal| %>
           <% result = meal['result'] || {} %>
@@ -275,43 +275,43 @@
         <% end %>
       </div>
     <% else %>
-      <div class="no-data">Aucun repas scanné sur cette période.</div>
+      <div class="no-data"><%= @t[:no_meals] %></div>
     <% end %>
 
     <!-- Progression corporelle -->
     <div class="body-section">
-      <div class="section-title">Progression corporelle</div>
+      <div class="section-title"><%= @t[:section_body] %></div>
       <% if @latest_weight %>
         <div class="body-row">
-          <span class="body-key">Poids actuel</span>
+          <span class="body-key"><%= @t[:body_weight] %></span>
           <span class="body-val lime"><%= @latest_weight %> kg</span>
         </div>
         <% if @weight_delta %>
           <div class="body-row">
-            <span class="body-key">Évolution</span>
+            <span class="body-key"><%= @t[:body_evolution] %></span>
             <span class="body-val <%= @weight_delta < 0 ? 'green' : @weight_delta > 0 ? 'red' : '' %>">
               <%= @weight_delta > 0 ? '+' : '' %><%= @weight_delta %> kg
             </span>
           </div>
         <% end %>
         <div class="body-row">
-          <span class="body-key">Mesures enregistrées</span>
+          <span class="body-key"><%= @t[:body_measures] %></span>
           <span class="body-val"><%= @body_entries_count %></span>
         </div>
       <% else %>
-        <div style="color:#4a4a6a;font-size:13px;padding:8px 0">Aucune mesure corporelle enregistrée.</div>
+        <div style="color:#4a4a6a;font-size:13px;padding:8px 0"><%= @t[:body_no_data] %></div>
       <% end %>
       <% if @tdee > 0 %>
         <div class="body-row">
-          <span class="body-key">Objectif TDEE</span>
-          <span class="body-val"><%= number_with_delimiter(@tdee) %> kcal/j</span>
+          <span class="body-key"><%= @t[:body_tdee] %></span>
+          <span class="body-val"><%= number_with_delimiter(@tdee) %> <%= @t[:kcal_day] %></span>
         </div>
         <div class="body-row">
-          <span class="body-key">Régime</span>
+          <span class="body-key"><%= @t[:body_diet] %></span>
           <span class="body-val lime"><%= @diet_type %></span>
         </div>
         <div class="body-row">
-          <span class="body-key">Objectif</span>
+          <span class="body-key"><%= @t[:body_goal] %></span>
           <span class="body-val"><%= @goal %></span>
         </div>
       <% end %>
@@ -319,7 +319,7 @@
 
     <!-- Activité IA -->
     <div class="ai-section">
-      <div class="section-title">Activité IA sur la période</div>
+      <div class="section-title"><%= @t[:section_ai] %></div>
       <% bar_pct = case @activity_level
                    when :inactive then 4
                    when :low      then 25
@@ -330,17 +330,17 @@
         <div class="activity-bar" style="width:<%= bar_pct %>%"></div>
       </div>
       <div class="activity-meta">
-        <span>Inactif</span>
+        <span><%= @t[:activity_inactive] %></span>
         <span style="font-weight:700;color:<%= @activity_level == :inactive ? '#aaa' : '#5a8a00' %>">
-          <%= { inactive: "Aucune activité", low: "Débutant", medium: "Régulier", high: "Expert" }[@activity_level] %>
+          <%= @t[:activity_labels][@activity_level] %>
         </span>
-        <span>Expert</span>
+        <span><%= @t[:activity_expert] %></span>
       </div>
       <p class="activity-msg">
-        <% if @activity_level == :inactive %> Reprenez l'application ! Photographiez votre prochain repas pour rester dans vos objectifs.
-        <% elsif @activity_level == :low %>      Un bon début ! Essayez d'analyser au moins un repas par jour.
-        <% elsif @activity_level == :medium %>   Vous êtes sur la bonne voie. Maintenez ce rythme !
-        <% elsif @activity_level == :high %>     Impressionnant ! Vous faites partie des utilisateurs les plus engagés.
+        <% if @activity_level == :inactive %> <%= @t[:activity_msg_inactive] %>
+        <% elsif @activity_level == :low %>   <%= @t[:activity_msg_low] %>
+        <% elsif @activity_level == :medium %><%= @t[:activity_msg_medium] %>
+        <% elsif @activity_level == :high %>  <%= @t[:activity_msg_high] %>
         <% end %>
       </p>
     </div>
@@ -348,40 +348,32 @@
     <!-- Avertissement expiration abonnement -->
     <% if @expiry_warning %>
       <div class="expiry-warning">
-        <div class="expiry-warning-title">⚠️ Votre abonnement expire bientôt</div>
+        <div class="expiry-warning-title"><%= @t[:expiry_title] %></div>
         <div class="expiry-warning-text">
-          Il vous reste <strong><%= @days_remaining %> jour<%= @days_remaining > 1 ? 's' : '' %></strong>
-          (expire le <%= @expires_at.strftime("%-d %B %Y") %>).
-          Renouvelez dès maintenant pour ne pas perdre votre accès.
+          <%= raw @t[:expiry_remaining].call(@days_remaining) %>
+          (<%= @t[:expiry_expires] %> <%= @expires_at.strftime("%-d %B %Y") %>).
+          <%= @t[:expiry_renew] %>
         </div>
       </div>
     <% end %>
 
     <!-- Conseil rotatif -->
     <div class="tip">
-      <div class="tip-label">Conseil DietVision</div>
+      <div class="tip-label"><%= @t[:tip_label] %></div>
       <div class="tip-text">
-        <% tips = [
-          "Photographiez vos repas dès qu'ils sont servis pour une analyse plus précise des portions.",
-          "Posez à votre coach IA des questions spécifiques comme \"Quel petit-déjeuner pour augmenter mes protéines ?\"",
-          "Analysez aussi vos snacks ! Les collations représentent souvent 20 à 30% de l'apport calorique journalier.",
-          "Consultez vos graphiques chaque semaine pour identifier vos tendances nutritionnelles.",
-          "Boire de l'eau avant chaque repas peut réduire l'apport calorique de 13% en moyenne.",
-          "Demandez à votre coach IA un plan de repas sur mesure adapté à vos objectifs du moment.",
-        ] %>
-        <%= tips[Date.today.cweek % tips.size] %>
+        <%= @t[:tips][Date.today.cweek % @t[:tips].size] %>
       </div>
     </div>
 
     <!-- CTA -->
     <div class="cta-wrap">
-      <a href="https://dietvision.app" class="cta">Ouvrir DietVision</a>
+      <a href="https://dietvision.app" class="cta"><%= @t[:cta] %></a>
     </div>
 
     <div class="divider"></div>
 
     <p style="font-size:12px; color:#8080a0; text-align:center; margin-top:16px; line-height:1.6;">
-      Questions ? Écrivez-nous à
+      <%= @t[:questions] %>
       <a href="mailto:<%= AppConfig.get('support_email') %>" style="color:#7070a0;"><%= AppConfig.get('support_email') %></a>
     </p>
   </div>
@@ -389,7 +381,7 @@
   <!-- Footer -->
   <div class="footer">
     <p class="footer-text">
-      Vous recevez ce rapport car vous avez un abonnement <strong><%= @plan.name %></strong> DietVision.<br>
+      <%= @t[:footer_prefix] %> <strong><%= @plan.name %></strong> <%= @t[:footer_suffix] %><br>
       &copy; <%= Date.current.year %> DietVision &middot;
       <a href="https://dietvision.app" class="footer-link">dietvision.app</a>
     </p>
