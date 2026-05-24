@@ -151,6 +151,8 @@
     </div>
 
     <%# ── Stripe ─────────────────────────────────────────── %>
+    <% stripe_mode_cfg = @configs.find { |c| c[:key] == "stripe_mode" } %>
+    <% current_stripe_mode = stripe_mode_cfg&.dig(:value).presence || "live" %>
     <div>
       <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Paiements — Stripe</h2>
       <p class="text-xs text-gray-600 mb-3">
@@ -159,42 +161,116 @@
         Le webhook secret se génère dans Webhooks → endpoint URL :
         <code class="text-gray-400">https://api.diet-vision.com/api/v1/payments/webhook</code>
       </p>
-      <div class="space-y-4">
+
+      <%# ── Sélecteur de mode Live / Test ── %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-200 mb-0.5">Mode actif</label>
+            <div class="text-xs text-gray-600 font-mono">stripe_mode</div>
+          </div>
+          <%# Badge mode actuel %>
+          <% if current_stripe_mode == "live" %>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-red-900/40 text-red-400 border border-red-800">🔴 LIVE — Production</span>
+          <% else %>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-900/40 text-yellow-400 border border-yellow-800">🟡 TEST — Sandbox</span>
+          <% end %>
+        </div>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <input type="radio" name="configs[stripe_mode]" value="live"
+                   <%= current_stripe_mode == "live" ? "checked" : "" %>
+                   onchange="updateStripeModeUI('live')"
+                   class="accent-red-500 w-4 h-4">
+            <span class="text-sm text-white group-hover:text-red-300 transition-colors">
+              🔴 <strong>Live</strong> — clés <code class="text-xs text-gray-400">pk_live_ / sk_live_</code>
+            </span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <input type="radio" name="configs[stripe_mode]" value="test"
+                   <%= current_stripe_mode == "test" ? "checked" : "" %>
+                   onchange="updateStripeModeUI('test')"
+                   class="accent-yellow-400 w-4 h-4">
+            <span class="text-sm text-white group-hover:text-yellow-300 transition-colors">
+              🟡 <strong>Test</strong> — clés <code class="text-xs text-gray-400">pk_test_ / sk_test_</code>
+            </span>
+          </label>
+        </div>
+        <p class="text-xs text-gray-600 mt-2">
+          ⚠️ En mode <strong>Live</strong>, les paiements sont réels. En mode <strong>Test</strong>, utilisez les cartes de test Stripe (ex: 4242 4242 4242 4242).
+        </p>
+      </div>
+
+      <%# ── Clés Live ── %>
+      <div id="stripe-live-keys" class="space-y-4 mb-4 <%= current_stripe_mode == 'test' ? 'opacity-40 pointer-events-none' : '' %>" style="transition: opacity 0.3s">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span class="text-xs font-semibold text-red-400 uppercase tracking-wider">Clés Live (Production)</span>
+        </div>
         <% %w[stripe_publishable_key stripe_secret_key stripe_webhook_secret].each do |key| %>
           <% cfg = @configs.find { |c| c[:key] == key } %>
           <% next unless cfg %>
           <% val = cfg[:value].to_s %>
           <% masked = val.present? ? (val[0..9] + "••••••••" + val[-4..]) : nil %>
-          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div class="bg-gray-900 rounded-xl border border-red-900/40 p-5">
             <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
             <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
-
-            <%# Affichage valeur actuelle %>
             <% if val.present? %>
               <div id="display-<%= key %>" class="flex items-center gap-3 mb-2">
-                <span class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-mono text-gray-300 truncate">
-                  <%= masked %>
-                </span>
+                <span class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-mono text-gray-300 truncate"><%= masked %></span>
                 <span class="text-xs font-semibold shrink-0" style="color:#C8FF00">✓ Défini</span>
                 <button type="button" onclick="editStripeKey('<%= key %>')"
-                        class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg cursor-pointer transition-colors">
-                  ✏️ Modifier
-                </button>
+                        class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg cursor-pointer transition-colors">✏️ Modifier</button>
               </div>
             <% end %>
-
-            <%# Champ de saisie (caché si déjà défini, visible si vide ou en édition) %>
             <div id="edit-<%= key %>" class="<%= val.present? ? 'hidden' : '' %>">
               <div class="flex gap-2">
                 <input type="password" id="input-<%= key %>" name="configs[<%= key %>]"
                        autocomplete="new-password"
                        placeholder="<%= key == 'stripe_secret_key' ? 'sk_live_...' : key == 'stripe_publishable_key' ? 'pk_live_...' : 'whsec_...' %>"
-                       class="flex-1 px-3 py-2.5 bg-gray-800 border border-blue-600 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-blue-400">
+                       class="flex-1 px-3 py-2.5 bg-gray-800 border border-red-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-red-500">
                 <% if val.present? %>
                   <button type="button" onclick="cancelEditKey('<%= key %>')"
-                          class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg cursor-pointer">
-                    Annuler
-                  </button>
+                          class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg cursor-pointer">Annuler</button>
+                <% end %>
+              </div>
+              <p class="text-xs text-gray-600 mt-1">Laissez vide pour conserver la valeur actuelle.</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%# ── Clés Test ── %>
+      <div id="stripe-test-keys" class="space-y-4 <%= current_stripe_mode == 'live' ? 'opacity-40 pointer-events-none' : '' %>" style="transition: opacity 0.3s">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+          <span class="text-xs font-semibold text-yellow-400 uppercase tracking-wider">Clés Test (Sandbox)</span>
+        </div>
+        <% %w[stripe_publishable_key_test stripe_secret_key_test stripe_webhook_secret_test].each do |key| %>
+          <% cfg = @configs.find { |c| c[:key] == key } %>
+          <% next unless cfg %>
+          <% val = cfg[:value].to_s %>
+          <% masked = val.present? ? (val[0..9] + "••••••••" + val[-4..]) : nil %>
+          <div class="bg-gray-900 rounded-xl border border-yellow-900/40 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg[:description] || cfg[:key] %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5"><%= cfg[:key] %></div>
+            <% if val.present? %>
+              <div id="display-<%= key %>" class="flex items-center gap-3 mb-2">
+                <span class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm font-mono text-gray-300 truncate"><%= masked %></span>
+                <span class="text-xs font-semibold shrink-0" style="color:#C8FF00">✓ Défini</span>
+                <button type="button" onclick="editStripeKey('<%= key %>')"
+                        class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg cursor-pointer transition-colors">✏️ Modifier</button>
+              </div>
+            <% end %>
+            <div id="edit-<%= key %>" class="<%= val.present? ? 'hidden' : '' %>">
+              <div class="flex gap-2">
+                <input type="password" id="input-<%= key %>" name="configs[<%= key %>]"
+                       autocomplete="new-password"
+                       placeholder="<%= key == 'stripe_secret_key_test' ? 'sk_test_...' : key == 'stripe_publishable_key_test' ? 'pk_test_...' : 'whsec_...' %>"
+                       class="flex-1 px-3 py-2.5 bg-gray-800 border border-yellow-700 rounded-lg text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:border-yellow-500">
+                <% if val.present? %>
+                  <button type="button" onclick="cancelEditKey('<%= key %>')"
+                          class="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg cursor-pointer">Annuler</button>
                 <% end %>
               </div>
               <p class="text-xs text-gray-600 mt-1">Laissez vide pour conserver la valeur actuelle.</p>
@@ -335,6 +411,20 @@ function cancelEditKey(key) {
   document.getElementById('display-' + key).classList.remove('hidden');
   document.getElementById('edit-' + key).classList.add('hidden');
   document.getElementById('input-' + key).value = '';
+}
+
+// ── Stripe mode toggle Live / Test ────────────────────────────────────────────
+function updateStripeModeUI(mode) {
+  const liveBlock = document.getElementById('stripe-live-keys');
+  const testBlock = document.getElementById('stripe-test-keys');
+  if (!liveBlock || !testBlock) return;
+  if (mode === 'live') {
+    liveBlock.classList.remove('opacity-40', 'pointer-events-none');
+    testBlock.classList.add('opacity-40', 'pointer-events-none');
+  } else {
+    testBlock.classList.remove('opacity-40', 'pointer-events-none');
+    liveBlock.classList.add('opacity-40', 'pointer-events-none');
+  }
 }
 
 // ── Tests API ─────────────────────────────────────────────────────────────────

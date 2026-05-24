@@ -13,9 +13,13 @@ class AppConfig < ApplicationRecord
     app_name
     support_email
     report_sender_email
+    stripe_mode
     stripe_publishable_key
     stripe_secret_key
     stripe_webhook_secret
+    stripe_publishable_key_test
+    stripe_secret_key_test
+    stripe_webhook_secret_test
     email_app_url
     email_scan_deeplink
     email_measures_deeplink
@@ -29,7 +33,7 @@ class AppConfig < ApplicationRecord
   # BUG-12 : cache pour éviter 2-4 requêtes SQL par request API
   # BUG-06 : les clés sensibles ne sont jamais loggées (ActiveRecord::Base.logger)
   CACHE_TTL     = 5.minutes
-  SENSITIVE_KEYS = %w[stripe_secret_key stripe_webhook_secret openrouter_api_key].freeze
+  SENSITIVE_KEYS = %w[stripe_secret_key stripe_webhook_secret stripe_secret_key_test stripe_webhook_secret_test openrouter_api_key].freeze
 
   def self.get(key)
     Rails.cache.fetch("app_config/#{key}", expires_in: CACHE_TTL) do
@@ -63,7 +67,22 @@ class AppConfig < ApplicationRecord
   end
   # 0 si non configuré — doit être défini dans le dashboard pour activer l'essai
   def self.trial_period_days       = get("trial_period_days")&.to_i || 0
-  def self.stripe_publishable_key  = get("stripe_publishable_key") || ENV["STRIPE_PUBLISHABLE_KEY"]
-  def self.stripe_secret_key       = get("stripe_secret_key")      || ENV["STRIPE_SECRET_KEY"]
-  def self.stripe_webhook_secret   = get("stripe_webhook_secret")  || ENV["STRIPE_WEBHOOK_SECRET"]
+  # Retourne "live" ou "test" (live par défaut)
+  def self.stripe_mode = get("stripe_mode").presence&.in?(%w[live test]) ? get("stripe_mode") : "live"
+  def self.stripe_live_mode? = stripe_mode == "live"
+  def self.stripe_test_mode? = stripe_mode == "test"
+
+  # Accesseurs contextuels : retourne la clé du mode actif
+  def self.stripe_publishable_key
+    stripe_test_mode? ? (get("stripe_publishable_key_test") || ENV["STRIPE_PUBLISHABLE_KEY_TEST"]) :
+                        (get("stripe_publishable_key")      || ENV["STRIPE_PUBLISHABLE_KEY"])
+  end
+  def self.stripe_secret_key
+    stripe_test_mode? ? (get("stripe_secret_key_test") || ENV["STRIPE_SECRET_KEY_TEST"]) :
+                        (get("stripe_secret_key")       || ENV["STRIPE_SECRET_KEY"])
+  end
+  def self.stripe_webhook_secret
+    stripe_test_mode? ? (get("stripe_webhook_secret_test") || ENV["STRIPE_WEBHOOK_SECRET_TEST"]) :
+                        (get("stripe_webhook_secret")       || ENV["STRIPE_WEBHOOK_SECRET"])
+  end
 end

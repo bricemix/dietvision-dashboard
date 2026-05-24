@@ -56,16 +56,18 @@ module Admin
 
     # GET /admin/configs/test_stripe
     def test_stripe
-      key = AppConfig.get("stripe_secret_key")
-      return render json: { error: "Clé Stripe manquante — configurez stripe_secret_key" }, status: :bad_request if key.blank?
+      active_mode = AppConfig.stripe_mode  # "live" ou "test"
+      key = AppConfig.stripe_secret_key    # retourne la clé du mode actif
+      return render json: { error: "Clé Stripe manquante — configurez stripe_secret_key (#{active_mode})" }, status: :bad_request if key.blank?
 
       Stripe.api_key = key
       balance = Stripe::Balance.retrieve
       render json: {
-        ok:       true,
-        livemode: balance.livemode,
-        mode:     balance.livemode ? "🔴 Production (live)" : "🟡 Test mode",
-        available: balance.available.map { |b| "#{b.amount / 100.0} #{b.currency.upcase}" }.join(", ")
+        ok:          true,
+        config_mode: active_mode,
+        livemode:    balance.livemode,
+        mode:        balance.livemode ? "🔴 Production (live)" : "🟡 Test mode",
+        available:   balance.available.map { |b| "#{b.amount / 100.0} #{b.currency.upcase}" }.join(", ")
       }
     rescue Stripe::AuthenticationError
       render json: { error: "Clé Stripe invalide ou révoquée" }
@@ -168,9 +170,13 @@ module Admin
         "app_name"                 => "Nom de l'application",
         "support_email"            => "Email support affiché dans les emails",
         "report_sender_email"      => "Email expéditeur des rapports (ex: rapports@diet-vision.com)",
-        "stripe_publishable_key"   => "Stripe — Publishable key (pk_live_... ou pk_test_...)",
-        "stripe_secret_key"        => "Stripe — Secret key (sk_live_... ou sk_test_...)",
-        "stripe_webhook_secret"    => "Stripe — Webhook signing secret (whsec_...)",
+        "stripe_mode"                  => "Mode actif : live (production) ou test (sandbox)",
+        "stripe_publishable_key"       => "Live — Publishable key (pk_live_...)",
+        "stripe_secret_key"            => "Live — Secret key (sk_live_...)",
+        "stripe_webhook_secret"        => "Live — Webhook signing secret (whsec_...)",
+        "stripe_publishable_key_test"  => "Test — Publishable key (pk_test_...)",
+        "stripe_secret_key_test"       => "Test — Secret key (sk_test_...)",
+        "stripe_webhook_secret_test"   => "Test — Webhook signing secret (whsec_...)",
         "email_app_url"            => "URL principale de l'app dans les emails (bouton CTA)",
         "email_scan_deeplink"      => "Deep link bouton « Scanner un repas » (ex: dietvision://scan)",
         "email_measures_deeplink"  => "Deep link bouton « Ajouter mes mesures » (ex: dietvision://measures)",
