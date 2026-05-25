@@ -2,7 +2,7 @@
 
 <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
   <div>
-    <p class="text-sm text-gray-500 mt-0.5">Les plans actifs sont visibles immédiatement dans l'app mobile</p>
+    <p class="text-sm text-gray-500 mt-0.5">Plans visibles dans l'app mobile — 4 durées par tier</p>
   </div>
   <div class="flex items-center gap-3">
     <%# Sync globale Stripe %>
@@ -29,159 +29,210 @@
   </div>
 </div>
 
-<div class="grid grid-cols-1 gap-4">
-  <% @plans.each do |plan| %>
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-      <div class="flex items-start justify-between gap-4">
+<%
+  # Grouper les plans par nom de base (Starter, Pro, Premium, VIP)
+  freq_order = %w[monthly quarterly semi_annual yearly]
+  freq_labels = { "monthly" => "1 mois", "quarterly" => "3 mois", "semi_annual" => "6 mois", "yearly" => "1 an" }
+  groups = @plans
+    .group_by { |p| p.name.strip }
+    .sort_by  { |_name, plans| plans.map(&:position).min || 99 }
+%>
 
-        <%# Infos plan %>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-base font-bold text-white"><%= plan.name %></span>
-            <% if plan.badge.present? %>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style="background:rgba(200,255,0,0.15);color:#C8FF00;border:1px solid rgba(200,255,0,0.3)">
-                <%= plan.badge.upcase %>
-              </span>
-            <% end %>
-            <%# Status badge %>
-            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full <%= plan.active? ? 'bg-green-900/50 text-green-400' : plan.draft? ? 'bg-gray-800 text-gray-500' : 'bg-yellow-900/30 text-yellow-500' %>">
+<% groups.each do |group_name, group_plans| %>
+  <%
+    # Trier les plans par fréquence dans l'ordre mensuel→trim→sem→annuel
+    sorted = group_plans.sort_by { |p| freq_order.index(p.billing_frequency) || 99 }
+    is_free = sorted.all? { |p| p.price_eur_cents.to_i == 0 }
+    tier_color = case group_name
+      when "VIP"     then "#FFD700"
+      when "Premium" then "#C8FF00"
+      when "Pro"     then "#818cf8"
+      else "#6b7280"
+    end
+    tier_bg = case group_name
+      when "VIP"     then "rgba(255,215,0,0.07)"
+      when "Premium" then "rgba(200,255,0,0.06)"
+      when "Pro"     then "rgba(129,140,248,0.07)"
+      else "rgba(107,114,128,0.05)"
+    end
+  %>
+
+  <div class="mb-6 bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+
+    <%# En-tête du groupe %>
+    <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between"
+         style="background: <%= tier_bg %>">
+      <div class="flex items-center gap-3">
+        <span class="text-lg font-black" style="color:<%= tier_color %>"><%= group_name %></span>
+        <% badge = sorted.first&.badge %>
+        <% if badge.present? %>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style="background:rgba(200,255,0,0.12);color:#C8FF00;border:1px solid rgba(200,255,0,0.25)">
+            <%= badge.upcase %>
+          </span>
+        <% end %>
+        <% if is_free %>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style="background:rgba(107,114,128,0.2);color:#9ca3af;border:1px solid rgba(107,114,128,0.3)">
+            GRATUIT
+          </span>
+        <% else %>
+          <span class="text-xs text-gray-500">
+            <%= sorted.count %> durée<%= sorted.count > 1 ? 's' : '' %> ·
+            de <%= sorted.first&.price_formatted %> à <%= sorted.last&.price_formatted %>
+          </span>
+        <% end %>
+      </div>
+      <div class="text-xs text-gray-600">
+        <%= sorted.count(&:stripe_configured?) %>/<%= sorted.count %> Stripe configurés
+      </div>
+    </div>
+
+    <% if is_free %>
+      <%# Plan gratuit — ligne simple %>
+      <% plan = sorted.first %>
+      <% if plan %>
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div>
+              <div class="text-xl font-bold text-gray-400">Gratuit</div>
+              <div class="text-xs text-gray-600 mt-0.5"><%= plan.description %></div>
+            </div>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full <%= plan.active? ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/30 text-yellow-500' %>">
               <%= plan.status.upcase %>
             </span>
           </div>
-          <div class="text-2xl font-bold lime"><%= plan.price_formatted %><span class="text-sm text-gray-500 font-normal ml-1">/ <%= plan.frequency_label.downcase %></span></div>
-          <% if plan.description.present? %>
-            <div class="text-sm text-gray-500 mt-1"><%= plan.description %></div>
-          <% end %>
+          <div class="flex items-center gap-2">
+            <%= link_to "Modifier", edit_admin_plan_path(plan),
+                  class: "px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors" %>
+            <%= button_to "Supprimer", admin_plan_path(plan), method: :delete,
+                  class: "px-3 py-1.5 text-xs bg-red-950 hover:bg-red-900/60 text-red-400 rounded-lg border border-red-900 cursor-pointer transition-colors",
+                  data: { turbo_confirm: "Supprimer le plan #{plan.name} ?" } %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <%# Plans payants — grille 4 colonnes (1m / 3m / 6m / 1an) %>
+      <div class="grid grid-cols-4 divide-x divide-gray-800">
+        <% freq_order.each do |freq| %>
+          <% plan = sorted.find { |p| p.billing_frequency == freq } %>
+          <div class="p-4 <%= plan.nil? ? 'opacity-30' : '' %>">
+            <%# En-tête colonne %>
+            <div class="text-[10px] font-bold uppercase tracking-wider mb-3"
+                 style="color:<%= freq == 'yearly' ? '#FFD700' : tier_color %>">
+              <%= freq_labels[freq] %>
+              <% if freq == 'yearly' %>
+                <span class="ml-1 text-[9px] font-normal"
+                      style="color:rgba(255,215,0,0.6)">meilleure offre</span>
+              <% end %>
+            </div>
 
-          <%# Email report badge -%>
-          <% if plan.email_report_frequency.present? && plan.email_report_frequency != 'never' %>
-            <div class="mt-1 flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.25)">
-                <span>📧</span>
-                <span>Rapport <%= Plan::EMAIL_FREQUENCY_LABELS[plan.email_report_frequency]&.downcase %>
-                  <% if plan.email_report_frequency == 'weekly' %>
-                    · <%= { 'monday' => 'Lun', 'tuesday' => 'Mar', 'wednesday' => 'Mer',
-                            'thursday' => 'Jeu', 'friday' => 'Ven', 'saturday' => 'Sam', 'sunday' => 'Dim'
-                           }[plan.email_report_day] || plan.email_report_day %>
+            <% if plan %>
+              <%# Prix %>
+              <div class="text-2xl font-black mb-0.5" style="color:<%= tier_color %>">
+                <%= plan.price_formatted %>
+              </div>
+              <div class="text-[10px] text-gray-500 mb-3">
+                / <%= freq_labels[freq] %>
+                <% if freq != 'monthly' %>
+                  <%# Calcul économies vs mensuel %>
+                  <% monthly = sorted.find { |p| p.billing_frequency == 'monthly' } %>
+                  <% if monthly && monthly.price_eur_cents > 0 && plan.price_eur_cents > 0 %>
+                    <%
+                      months = { 'quarterly' => 3, 'semi_annual' => 6, 'yearly' => 12 }[freq] || 1
+                      monthly_total = monthly.price_eur_cents * months
+                      savings_pct = ((monthly_total - plan.price_eur_cents).to_f / monthly_total * 100).round
+                    %>
+                    <% if savings_pct > 0 %>
+                      <span class="ml-1 font-bold" style="color:#4ade80">-<%= savings_pct %>%</span>
+                    <% end %>
                   <% end %>
-                </span>
-              </span>
-            </div>
-          <% end %>
+                <% end %>
+              </div>
 
-          <%# Stripe status -%>
-          <div class="mt-1 flex items-center gap-2">
-            <% if plan.stripe_price_id.present? %>
-              <span class="inline-flex items-center gap-1 text-[10px] text-green-400">
-                <span>⚡</span>
-                <span class="font-mono text-[9px] text-green-500/70"><%= plan.stripe_price_id %></span>
+              <%# Statut %>
+              <span class="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-2
+                           <%= plan.active? ? 'bg-green-900/50 text-green-400' : plan.draft? ? 'bg-gray-800 text-gray-500' : 'bg-yellow-900/30 text-yellow-500' %>">
+                <%= plan.status.upcase %>
               </span>
+
+              <%# Stripe ID %>
+              <div class="mb-3">
+                <% if plan.stripe_price_id.present? %>
+                  <div class="flex items-center gap-1">
+                    <span class="text-green-500 text-xs">⚡</span>
+                    <span class="font-mono text-[9px] text-green-600 truncate max-w-[120px]"
+                          title="<%= plan.stripe_price_id %>">
+                      <%= plan.stripe_price_id %>
+                    </span>
+                  </div>
+                <% else %>
+                  <span class="text-[10px] text-orange-500/70 italic">⚠ Stripe manquant</span>
+                <% end %>
+              </div>
+
+              <%# Actions %>
+              <div class="flex flex-col gap-1.5">
+                <%= link_to "✏ Modifier", edit_admin_plan_path(plan),
+                      class: "block text-center px-2 py-1.5 text-[11px] bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors" %>
+
+                <% if plan.price_eur_cents.to_i > 0 %>
+                  <%= button_to sync_stripe_admin_plan_path(plan), method: :post,
+                        class: "block text-center w-full px-2 py-1.5 text-[11px] rounded-lg border cursor-pointer transition-colors",
+                        style: plan.stripe_price_id.present? ? "background:rgba(99,102,241,0.12);color:#818cf8;border-color:rgba(99,102,241,0.3)" : "background:rgba(99,102,241,0.2);color:#818cf8;border-color:rgba(99,102,241,0.5)",
+                        data: { turbo_confirm: plan.stripe_price_id.present? ? "Recréer le prix Stripe pour #{plan.name} (#{freq_labels[freq]}) ? L'ancien sera archivé." : nil } do %>
+                    <%= plan.stripe_price_id.present? ? "⟳ Re-sync Stripe" : "→ Stripe" %>
+                  <% end %>
+                <% end %>
+
+                <% if plan.active? %>
+                  <%= button_to "Désactiver", deactivate_admin_plan_path(plan), method: :post,
+                        class: "block text-center w-full px-2 py-1.5 text-[11px] bg-yellow-900/20 hover:bg-yellow-900/40 text-yellow-400 rounded-lg border border-yellow-900/40 cursor-pointer transition-colors" %>
+                <% elsif plan.draft? || plan.inactive? %>
+                  <%= button_to "Activer", activate_admin_plan_path(plan), method: :post,
+                        class: "block text-center w-full px-2 py-1.5 text-[11px] rounded-lg border cursor-pointer transition-colors",
+                        style: "background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)" %>
+                <% end %>
+
+                <%= button_to "✕", admin_plan_path(plan), method: :delete,
+                      class: "block text-center w-full px-2 py-1.5 text-[11px] bg-red-950 hover:bg-red-900/60 text-red-400 rounded-lg border border-red-900 cursor-pointer transition-colors",
+                      data: { turbo_confirm: "Supprimer #{plan.name} (#{freq_labels[freq]}) ?" } %>
+              </div>
             <% else %>
-              <span class="text-[10px] text-gray-600 italic">Pas de Stripe Price ID — cliquer "→ Stripe"</span>
+              <%# Durée manquante — bouton créer %>
+              <div class="text-gray-700 text-sm mb-4">—</div>
+              <%= link_to "+ Créer", new_admin_plan_path,
+                    class: "block text-center px-2 py-1.5 text-[11px] rounded-lg border border-dashed cursor-pointer transition-colors",
+                    style: "border-color:rgba(107,114,128,0.3);color:#6b7280" %>
             <% end %>
           </div>
-
-          <%# Prix par devise -%>
-          <% if plan.prices.any? %>
-            <div class="mt-2 flex flex-wrap gap-1.5">
-              <% plan.prices.each do |code, amount| %>
-                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400">
-                  <span class="font-semibold text-gray-300"><%= code %></span>
-                  <span><%= code.in?(["EUR","USD","GBP","CHF"]) ? "#{(amount.to_i / 100.0).round(2)}" : amount %></span>
-                </span>
-              <% end %>
-              <% unless plan.prices["EUR"].to_i > 0 %>
-                <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-semibold"
-                      style="background:rgba(251,146,60,0.12);border-color:rgba(251,146,60,0.4);color:#fb923c"
-                      title="Prix EUR non défini — l'app mobile utilisera le prix USD comme fallback">
-                  ⚠ EUR manquant
-                </span>
-              <% end %>
-            </div>
-          <% else %>
-            <div class="mt-2 flex items-center gap-2">
-              <span class="text-xs text-gray-600 italic">Aucun prix natif</span>
-              <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-semibold"
-                    style="background:rgba(251,146,60,0.15);border-color:rgba(251,146,60,0.5);color:#fb923c"
-                    title="Aucun prix EUR défini — l'app mobile affichera l'ancien prix USD. Modifiez le plan et entrez un prix EUR.">
-                ⚠ Prix EUR manquant
-              </span>
-            </div>
-          <% end %>
-        </div>
-
-        <%# Actions %>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <%= link_to "Modifier", edit_admin_plan_path(plan),
-                class: "px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors" %>
-
-          <%# Bouton Stripe Sync %>
-          <% if plan.price_eur_cents.to_i > 0 %>
-            <%= button_to sync_stripe_admin_plan_path(plan), method: :post,
-                  class: "px-3 py-1.5 text-xs rounded-lg border cursor-pointer transition-colors flex items-center gap-1",
-                  style: plan.stripe_price_id.present? ? "background:rgba(99,102,241,0.12);color:#818cf8;border-color:rgba(99,102,241,0.3)" : "background:rgba(99,102,241,0.2);color:#818cf8;border-color:rgba(99,102,241,0.5)",
-                  data: { turbo_confirm: plan.stripe_price_id.present? ? "Recréer le prix Stripe pour #{plan.name} ? L'ancien sera archivé." : nil } do %>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3">
-                <path d="M4 12a1 1 0 0 1 1-1h10.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L15.586 13H5a1 1 0 0 1-1-1z"/>
-              </svg>
-              <%= plan.stripe_price_id.present? ? "Re-sync Stripe" : "→ Stripe" %>
-            <% end %>
-          <% end %>
-
-          <% if plan.active? %>
-            <%= button_to "Désactiver", deactivate_admin_plan_path(plan), method: :post,
-                  class: "px-3 py-1.5 text-xs bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-400 rounded-lg border border-yellow-900/50 cursor-pointer transition-colors" %>
-          <% elsif plan.draft? || plan.inactive? %>
-            <%= button_to "Activer", activate_admin_plan_path(plan), method: :post,
-                  class: "px-3 py-1.5 text-xs rounded-lg border cursor-pointer transition-colors",
-                  style: "background:rgba(200,255,0,0.08);color:#C8FF00;border-color:rgba(200,255,0,0.25)" %>
-          <% end %>
-          <%= button_to "Supprimer", admin_plan_path(plan), method: :delete,
-                class: "px-3 py-1.5 text-xs bg-red-950 hover:bg-red-900/60 text-red-400 rounded-lg border border-red-900 cursor-pointer transition-colors",
-                data: { turbo_confirm: "Supprimer le plan #{plan.name} ?" } %>
-        </div>
+        <% end %>
       </div>
 
-      <%# Features + Opérateurs %>
-      <div class="mt-4 pt-4 border-t border-gray-800 flex flex-wrap gap-6">
-        <div class="flex-1 min-w-0">
-          <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Fonctionnalités</div>
-          <% if plan.features.any? %>
-            <ul class="space-y-1">
-              <% plan.features.first(5).each do |f| %>
-                <li class="text-sm text-gray-300 flex items-center gap-1.5">
-                  <span style="color:#C8FF00">✓</span> <%= f %>
-                </li>
-              <% end %>
-              <% if plan.features.size > 5 %>
-                <li class="text-xs text-gray-600">+<%= plan.features.size - 5 %> autres…</li>
-              <% end %>
-            </ul>
-          <% else %>
-            <span class="text-sm text-gray-600">Aucune fonctionnalité définie</span>
-          <% end %>
-        </div>
-        <div>
-          <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Opérateurs acceptés</div>
-          <div class="flex flex-wrap gap-1.5">
-            <% plan.operator_labels.each do |op| %>
-              <span class="text-xs px-2.5 py-1 bg-gray-800 text-gray-300 rounded-full border border-gray-700"><%= op %></span>
-            <% end %>
-            <% if plan.operators.empty? %>
-              <span class="text-xs text-gray-600">Non définis</span>
+      <%# Features (collapsibles, partagées entre durées — on prend le 1er plan) %>
+      <% ref_plan = sorted.first %>
+      <% if ref_plan&.features&.any? %>
+        <details class="border-t border-gray-800">
+          <summary class="px-5 py-2.5 text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
+            Fonctionnalités (<%= ref_plan.features.count %>)
+          </summary>
+          <div class="px-5 pb-4 grid grid-cols-2 gap-x-6 gap-y-1">
+            <% ref_plan.features.each do |f| %>
+              <div class="text-xs text-gray-400 flex items-center gap-1.5">
+                <span style="color:<%= tier_color %>">✓</span> <%= f %>
+              </div>
             <% end %>
           </div>
-        </div>
-      </div>
-    </div>
-  <% end %>
+        </details>
+      <% end %>
+    <% end %>
 
-  <% if @plans.empty? %>
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-      <div class="text-gray-600 mb-3">Aucun plan créé</div>
-      <%= link_to "Créer le premier plan", new_admin_plan_path, class: "text-sm lime hover:underline" %>
-    </div>
-  <% end %>
-</div>
+  </div>
+<% end %>
+
+<% if @plans.empty? %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
+    <div class="text-gray-600 mb-3">Aucun plan créé</div>
+    <%= link_to "Créer le premier plan", new_admin_plan_path, class: "text-sm lime hover:underline" %>
+  </div>
+<% end %>
