@@ -1,7 +1,7 @@
 class ApiUsage < ApplicationRecord
   belongs_to :user
 
-  validates :endpoint, inclusion: { in: %w[analyze_food coach_chat] }
+  validates :endpoint, inclusion: { in: %w[analyze_food coach_chat dish_recommendation] }
 
   scope :this_month, -> { where(created_at: Time.current.beginning_of_month..) }
   scope :today,      -> { where(created_at: Time.current.beginning_of_day..) }

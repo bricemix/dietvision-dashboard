@@ -7,7 +7,13 @@ class AppConfig < ApplicationRecord
     openrouter_default_model
     openrouter_vision_model
     free_plan_daily_limit
+    pro_plan_daily_limit
     premium_plan_daily_limit
+    vip_plan_daily_limit
+    trial_plan_daily_limit
+    pro_dishes_daily_limit
+    premium_dishes_daily_limit
+    vip_dishes_daily_limit
     trial_enabled
     trial_period_days
     app_name
@@ -57,8 +63,16 @@ class AppConfig < ApplicationRecord
   def self.openrouter_api_key      = get("openrouter_api_key")
   def self.default_model           = get("openrouter_default_model") || "google/gemini-2.0-flash-001"
   def self.vision_model            = get("openrouter_vision_model") || "google/gemini-2.0-flash-001"
-  def self.free_daily_limit        = get("free_plan_daily_limit")&.to_i || 5
-  def self.premium_daily_limit     = get("premium_plan_daily_limit")&.to_i || 100
+  def self.free_daily_limit        = get("free_plan_daily_limit")&.to_i || 3
+  def self.pro_daily_limit         = get("pro_plan_daily_limit")&.to_i || 30
+  def self.premium_daily_limit     = get("premium_plan_daily_limit")&.to_i || 75
+  def self.vip_daily_limit         = get("vip_plan_daily_limit")&.to_i || 999
+  def self.trial_daily_limit       = get("trial_plan_daily_limit")&.to_i || 20
+  # Limites journalières — Plats recommandés (nombre de rafraîchissements)
+  # Free/Trial : 0 (feature verrouillée côté Flutter + backend)
+  def self.pro_dishes_limit        = get("pro_dishes_daily_limit")&.to_i || 5
+  def self.premium_dishes_limit    = get("premium_dishes_daily_limit")&.to_i || 15
+  def self.vip_dishes_limit        = get("vip_dishes_daily_limit")&.to_i || 999
   # Essai activé par défaut (opt-out) — désactiver explicitement avec "0" ou "false"
   def self.trial_enabled?
     val = get("trial_enabled")

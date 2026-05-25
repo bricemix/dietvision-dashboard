@@ -19,6 +19,7 @@ Rails.application.routes.draw do
       # IA
       post   "ai/analyze",     to: "ai#analyze"
       post   "ai/coach",       to: "ai#coach"
+      post   "ai/dishes",      to: "ai#dishes"
 
       # Plans (public)
       get    "plans",          to: "plans#index"

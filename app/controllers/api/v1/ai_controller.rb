@@ -1,7 +1,8 @@
 module Api
   module V1
     class AiController < BaseController
-      before_action :check_daily_limit!
+      before_action :check_daily_limit!, only: %i[analyze coach]
+      before_action :check_dishes_limit!, only: %i[dishes]
 
       # POST /api/v1/ai/analyze
       # Body: { image: "<base64 JPEG>", locale: "fr", model: "..." (optional) }
@@ -42,6 +43,27 @@ module Api
           render json: result
         end
       end
+      # POST /api/v1/ai/dishes
+      # Body: { messages: [{role:"user", content:"..."}], profile: {...}, locale: "fr", max_tokens: 1200 }
+      # Tracé séparément (endpoint: dish_recommendation) avec limite propre par plan.
+      def dishes
+        messages = params[:messages]
+        return render json: { error: "Messages manquants" }, status: :bad_request if messages.blank?
+
+        locale     = sanitize_locale(params[:locale])
+        max_tokens = params[:max_tokens].to_i.clamp(100, 2000).then { |v| v > 0 ? v : nil }
+        profile    = params[:profile] || {}
+        service    = OpenrouterService.new(user: current_user)
+        result     = service.dish_recommendations(messages, profile: profile, model: params[:model],
+                                                  locale: locale, max_tokens: max_tokens)
+
+        if result[:error]
+          render json: result, status: :unprocessable_entity
+        else
+          render json: result
+        end
+      end
+
       private
 
       SUPPORTED_LOCALES = %w[fr en de es it pt nl].freeze

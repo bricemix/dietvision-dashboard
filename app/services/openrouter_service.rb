@@ -109,6 +109,48 @@ class OpenrouterService
     { error: e.message }
   end
 
+  # Recommandations de plats — appel dédié, tracé séparément (endpoint: dish_recommendation)
+  def dish_recommendations(messages, profile:, model: nil, locale: "fr", max_tokens: nil)
+    model ||= AppConfig.default_model
+    start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    # Pas de system_prompt coach ici — le prompt utilisateur contient toutes les instructions
+    payload = {
+      model:      model,
+      max_tokens: max_tokens || 1200,
+      messages:   messages
+    }
+
+    response = post("chat/completions", payload)
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
+
+    data = parse_response(response)
+
+    if response.success? && !data["error"]
+      text  = data.dig("choices", 0, "message", "content")
+      usage = data["usage"] || {}
+      record_usage(endpoint: "dish_recommendation", model: model,
+                   input_tokens: usage["prompt_tokens"].to_i,
+                   output_tokens: usage["completion_tokens"].to_i,
+                   duration_ms: duration_ms, status: "success")
+      { reply: text }
+    else
+      err_detail = data["error"]
+      err_msg = err_detail.is_a?(Hash) ? err_detail["message"].to_s : err_detail.to_s
+      err_msg = "Recommandation indisponible (#{response.status})" if err_msg.blank?
+      Rails.logger.error("OpenRouter dish_recommendation API error (#{response.status}): #{err_msg}")
+      record_usage(endpoint: "dish_recommendation", model: model, status: "error", duration_ms: duration_ms,
+                   error_message: "HTTP #{response.status} — #{err_msg}")
+      { error: err_msg }
+    end
+  rescue => e
+    duration_ms = defined?(start_time) ? ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round : 0
+    Rails.logger.error("OpenRouter dish_recommendation error [#{e.class}]: #{e.message}")
+    record_usage(endpoint: "dish_recommendation", model: model || "unknown", status: "error", duration_ms: duration_ms,
+                 error_message: "[#{e.class}] #{e.message}")
+    { error: e.message }
+  end
+
   private
 
   def post(path, body)

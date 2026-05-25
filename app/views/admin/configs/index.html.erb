@@ -101,7 +101,7 @@
     <div>
       <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Intelligence Artificielle</h2>
       <div class="space-y-4">
-        <% %w[openrouter_api_key openrouter_default_model openrouter_vision_model free_plan_daily_limit premium_plan_daily_limit].each do |key| %>
+        <% %w[openrouter_api_key openrouter_default_model openrouter_vision_model free_plan_daily_limit pro_plan_daily_limit premium_plan_daily_limit vip_plan_daily_limit pro_dishes_daily_limit premium_dishes_daily_limit vip_dishes_daily_limit].each do |key| %>
           <% cfg = @configs.find { |c| c[:key] == key } %>
           <% next unless cfg %>
           <% val = cfg[:value].to_s %>
@@ -321,6 +321,24 @@
             </div>
             <p class="text-xs text-gray-600 mt-2">
               Recommandé : 7 à 14 jours. La période démarre automatiquement à l'inscription.
+            </p>
+          </div>
+        <% end %>
+
+        <%# trial_plan_daily_limit %>
+        <% cfg_trial_limit = @configs.find { |c| c[:key] == "trial_plan_daily_limit" } %>
+        <% if cfg_trial_limit %>
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <label class="block text-sm font-medium text-gray-200 mb-1"><%= cfg_trial_limit[:description] || "Limite journalière — période d'essai" %></label>
+            <div class="text-xs text-gray-600 font-mono mb-2.5">trial_plan_daily_limit</div>
+            <div class="flex items-center gap-3">
+              <input type="number" name="configs[trial_plan_daily_limit]" min="1" max="999"
+                     value="<%= cfg_trial_limit[:value].presence || 20 %>"
+                     class="w-32 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white font-mono">
+              <span class="text-sm text-gray-500">scans / jour</span>
+            </div>
+            <p class="text-xs text-gray-600 mt-2">
+              Nombre de scans autorisés par jour pendant la période d'essai. Par défaut : 20.
             </p>
           </div>
         <% end %>
