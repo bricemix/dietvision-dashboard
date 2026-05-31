@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "rails", "~> 8.0.4"
+gem "rails", "~> 8.1.3"
 gem "propshaft"
 gem "sqlite3", ">= 2.1"  # dev/test + SolidCache/Queue/Cable en prod
 gem "pg", "~> 1.5"       # production primary database
