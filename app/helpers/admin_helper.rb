@@ -1,5 +1,4 @@
 module AdminHelper
-
   # Carte KPI : label + valeur + icône SVG (string) + couleur icône
   # Exemple: stat_card("Utilisateurs", 2847, icon_users_svg, "text-blue-400")
   def stat_card(label, value, icon_svg, icon_color = "text-gray-400")

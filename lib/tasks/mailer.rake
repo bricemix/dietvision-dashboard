@@ -1,5 +1,4 @@
 namespace :mailer do
-
   # Envoie le bilan hebdomadaire à tous les utilisateurs premium actifs
   # Usage : bundle exec rails mailer:weekly_digest
   # Cron  : 0 8 * * 1   (chaque lundi à 8h)
@@ -33,7 +32,7 @@ namespace :mailer do
   # Test sur un seul email (pour vérification avant déploiement cron)
   # Usage : bundle exec rails "mailer:test_weekly[test@example.com]"
   desc "Envoie un bilan de test à l'adresse spécifiée"
-  task :test_weekly, [:email] => :environment do |_t, args|
+  task :test_weekly, [ :email ] => :environment do |_t, args|
     email = args[:email].presence || "admin@dietvision.app"
     user  = User.find_by(email: email)
 
@@ -50,5 +49,4 @@ namespace :mailer do
     PremiumMailer.weekly_digest(user).deliver_now
     puts "Bilan de test envoye a : #{email}"
   end
-
 end

@@ -54,7 +54,7 @@ module Admin
         begin
           Stripe.api_key = AppConfig.stripe_secret_key || ENV["STRIPE_SECRET_KEY"]
           session = Stripe::Checkout::Session.retrieve(
-            { id: session_id, expand: ["subscription"] }
+            { id: session_id, expand: [ "subscription" ] }
           )
 
           next unless session.payment_status == "paid"
@@ -95,7 +95,7 @@ module Admin
       begin
         Stripe.api_key = AppConfig.stripe_secret_key || ENV["STRIPE_SECRET_KEY"]
         session = Stripe::Checkout::Session.retrieve(
-          { id: session_id, expand: ["subscription"] }
+          { id: session_id, expand: [ "subscription" ] }
         )
 
         unless session.payment_status == "paid"

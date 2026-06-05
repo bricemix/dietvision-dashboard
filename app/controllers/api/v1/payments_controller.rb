@@ -98,7 +98,7 @@ module Api
 
         # 1. Récupérer la session Stripe
         stripe_session = Stripe::Checkout::Session.retrieve(
-          { id: session_id, expand: ["subscription", "subscription.latest_invoice"] }
+          { id: session_id, expand: [ "subscription", "subscription.latest_invoice" ] }
         )
         paid = stripe_session.payment_status == "paid"
 

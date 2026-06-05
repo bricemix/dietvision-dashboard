@@ -9,7 +9,7 @@ class CreateUsers < ActiveRecord::Migration[8.0]
       t.string  :status,           default: "active"  # active | suspended | deleted
       t.string  :plan,             default: "free"    # free | premium
       t.datetime :subscription_expires_at
-      t.string  :device_token   # FCM pour notifications push
+      t.string :device_token   # FCM pour notifications push
 
       t.timestamps
     end

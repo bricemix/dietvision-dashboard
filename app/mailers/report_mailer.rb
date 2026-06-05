@@ -1,5 +1,4 @@
 class ReportMailer < ApplicationMailer
-
   # ── Traductions du rapport par locale ─────────────────────────────────────
   REPORT_T = {
     "fr" => {
@@ -20,7 +19,7 @@ class ReportMailer < ApplicationMailer
       kcal_day:          "kcal/j",
       kcal_target:       "cible :",
       kcal_vs:           "vs objectif",
-      kcal_text_balanced:"Vos apports sont alignés avec votre objectif. Continuez ainsi !",
+      kcal_text_balanced: "Vos apports sont alignés avec votre objectif. Continuez ainsi !",
       kcal_text_deficit: "Vous consommez moins que votre objectif. Si c'est votre but, bravo ! Sinon, pensez à ajouter des collations riches en protéines.",
       kcal_text_surplus: "Vous dépassez votre objectif quotidien. Essayez de réduire les portions ou d'ajouter une activité physique.",
       section_macros:    "Macronutriments totaux sur la période",
@@ -56,7 +55,7 @@ class ReportMailer < ApplicationMailer
         "Analysez aussi vos snacks ! Les collations représentent souvent 20 à 30% de l'apport calorique journalier.",
         "Consultez vos graphiques chaque semaine pour identifier vos tendances nutritionnelles.",
         "Boire de l'eau avant chaque repas peut réduire l'apport calorique de 13% en moyenne.",
-        "Demandez à votre coach IA un plan de repas sur mesure adapté à vos objectifs du moment.",
+        "Demandez à votre coach IA un plan de repas sur mesure adapté à vos objectifs du moment."
       ],
       cta:               "Ouvrir DietVision",
       questions:         "Questions ? Écrivez-nous à",
@@ -65,7 +64,7 @@ class ReportMailer < ApplicationMailer
       subject_daily:     "Votre bilan quotidien DietVision",
       subject_weekly:    "Votre bilan hebdomadaire DietVision",
       subject_monthly:   "Votre bilan mensuel DietVision",
-      subject_default:   "Votre bilan DietVision",
+      subject_default:   "Votre bilan DietVision"
     },
     "us" => {
       lang: "en",
@@ -85,7 +84,7 @@ class ReportMailer < ApplicationMailer
       kcal_day:          "kcal/day",
       kcal_target:       "target:",
       kcal_vs:           "vs goal",
-      kcal_text_balanced:"Your intake is aligned with your goal. Keep it up!",
+      kcal_text_balanced: "Your intake is aligned with your goal. Keep it up!",
       kcal_text_deficit: "You're eating less than your goal. If that's your aim, great! Otherwise, consider adding protein-rich snacks.",
       kcal_text_surplus: "You're exceeding your daily goal. Try reducing portions or adding physical activity.",
       section_macros:    "Total macronutrients for the period",
@@ -121,7 +120,7 @@ class ReportMailer < ApplicationMailer
         "Also analyze your snacks! Snacks often account for 20–30% of daily calorie intake.",
         "Check your charts every week to identify your nutritional trends.",
         "Drinking water before each meal can reduce calorie intake by 13% on average.",
-        "Ask your AI coach for a custom meal plan tailored to your current goals.",
+        "Ask your AI coach for a custom meal plan tailored to your current goals."
       ],
       cta:               "Open DietVision",
       questions:         "Questions? Write to us at",
@@ -130,7 +129,7 @@ class ReportMailer < ApplicationMailer
       subject_daily:     "Your daily DietVision report",
       subject_weekly:    "Your weekly DietVision report",
       subject_monthly:   "Your monthly DietVision report",
-      subject_default:   "Your DietVision report",
+      subject_default:   "Your DietVision report"
     },
     "de" => {
       lang: "de",
@@ -150,7 +149,7 @@ class ReportMailer < ApplicationMailer
       kcal_day:          "kcal/Tag",
       kcal_target:       "Ziel:",
       kcal_vs:           "vs Ziel",
-      kcal_text_balanced:"Ihre Zufuhr stimmt mit Ihrem Ziel überein. Weiter so!",
+      kcal_text_balanced: "Ihre Zufuhr stimmt mit Ihrem Ziel überein. Weiter so!",
       kcal_text_deficit: "Sie essen weniger als Ihr Ziel. Wenn das Ihr Ziel ist, super! Andernfalls denken Sie an proteinreiche Snacks.",
       kcal_text_surplus: "Sie überschreiten Ihr Tagesziel. Versuchen Sie, die Portionen zu reduzieren oder mehr Sport zu treiben.",
       section_macros:    "Gesamte Makronährstoffe im Zeitraum",
@@ -186,7 +185,7 @@ class ReportMailer < ApplicationMailer
         "Analysieren Sie auch Ihre Snacks! Snacks machen oft 20–30% der täglichen Kalorienaufnahme aus.",
         "Überprüfen Sie Ihre Grafiken jede Woche, um Ihre Ernährungstrends zu erkennen.",
         "Wasser vor dem Essen kann die Kalorienaufnahme um durchschnittlich 13% reduzieren.",
-        "Bitten Sie Ihren KI-Coach um einen individuellen Ernährungsplan für Ihre aktuellen Ziele.",
+        "Bitten Sie Ihren KI-Coach um einen individuellen Ernährungsplan für Ihre aktuellen Ziele."
       ],
       cta:               "DietVision öffnen",
       questions:         "Fragen? Schreiben Sie uns an",
@@ -195,7 +194,7 @@ class ReportMailer < ApplicationMailer
       subject_daily:     "Ihr täglicher DietVision-Bericht",
       subject_weekly:    "Ihr wöchentlicher DietVision-Bericht",
       subject_monthly:   "Ihr monatlicher DietVision-Bericht",
-      subject_default:   "Ihr DietVision-Bericht",
+      subject_default:   "Ihr DietVision-Bericht"
     },
     "es" => {
       lang: "es",
@@ -215,7 +214,7 @@ class ReportMailer < ApplicationMailer
       kcal_day:          "kcal/día",
       kcal_target:       "objetivo:",
       kcal_vs:           "vs objetivo",
-      kcal_text_balanced:"Tu ingesta está alineada con tu objetivo. ¡Sigue así!",
+      kcal_text_balanced: "Tu ingesta está alineada con tu objetivo. ¡Sigue así!",
       kcal_text_deficit: "Comes menos que tu objetivo. ¡Si ese es tu propósito, genial! Si no, considera añadir snacks ricos en proteínas.",
       kcal_text_surplus: "Estás superando tu objetivo diario. Intenta reducir las porciones o añadir actividad física.",
       section_macros:    "Macronutrientes totales del período",
@@ -251,7 +250,7 @@ class ReportMailer < ApplicationMailer
         "¡Analiza también tus snacks! Los snacks suelen representar el 20-30% de la ingesta calórica diaria.",
         "Revisa tus gráficos cada semana para identificar tus tendencias nutricionales.",
         "Beber agua antes de cada comida puede reducir la ingesta calórica en un 13% de media.",
-        "Pide a tu coach IA un plan de comidas personalizado adaptado a tus objetivos actuales.",
+        "Pide a tu coach IA un plan de comidas personalizado adaptado a tus objetivos actuales."
       ],
       cta:               "Abrir DietVision",
       questions:         "¿Preguntas? Escríbenos a",
@@ -260,8 +259,8 @@ class ReportMailer < ApplicationMailer
       subject_daily:     "Tu informe diario DietVision",
       subject_weekly:    "Tu informe semanal DietVision",
       subject_monthly:   "Tu informe mensual DietVision",
-      subject_default:   "Tu informe DietVision",
-    },
+      subject_default:   "Tu informe DietVision"
+    }
   }.tap { |h| h["en"] = h["us"] }.freeze
 
   # Rapport nutritionnel périodique envoyé automatiquement aux abonnés d'un plan.
@@ -279,29 +278,29 @@ class ReportMailer < ApplicationMailer
 
     @period_meals = all_meals.select do |m|
       begin
-        DateTime.parse(m['date'].to_s) >= period_start
+        DateTime.parse(m["date"].to_s) >= period_start
       rescue
         false
       end
     end
 
     @meals_count    = @period_meals.length
-    @total_kcal     = @period_meals.sum { |m| (m.dig('result', 'calories') || 0).to_i }
+    @total_kcal     = @period_meals.sum { |m| (m.dig("result", "calories") || 0).to_i }
     @avg_kcal_day   = @meals_count > 0 ? (@total_kcal.to_f / period_days(plan)).round : 0
-    @total_protein  = @period_meals.sum { |m| (m.dig('result', 'protein') || 0).to_f }.round(1)
-    @total_carbs    = @period_meals.sum { |m| (m.dig('result', 'carbs')   || 0).to_f }.round(1)
-    @total_fat      = @period_meals.sum { |m| (m.dig('result', 'fat')     || 0).to_f }.round(1)
+    @total_protein  = @period_meals.sum { |m| (m.dig("result", "protein") || 0).to_f }.round(1)
+    @total_carbs    = @period_meals.sum { |m| (m.dig("result", "carbs")   || 0).to_f }.round(1)
+    @total_fat      = @period_meals.sum { |m| (m.dig("result", "fat")     || 0).to_f }.round(1)
 
     # Top 5 aliments de la période
     @top_meals = @period_meals
-      .sort_by { |m| -(m.dig('result', 'calories') || 0).to_i }
+      .sort_by { |m| -(m.dig("result", "calories") || 0).to_i }
       .first(5)
 
     # ── Profil nutritionnel ────────────────────────────────────────────────
     fitai = parse_json_hash(user.fitai_profile)
-    @tdee         = fitai['tdee']&.round || 0
-    @goal         = fitai['goal'] || '—'
-    @diet_type    = fitai['dietType'] || '—'
+    @tdee         = fitai["tdee"]&.round || 0
+    @goal         = fitai["goal"] || "—"
+    @diet_type    = fitai["dietType"] || "—"
     @target_kcal  = @tdee
 
     # Déficit / surplus moyen sur la période
@@ -316,11 +315,11 @@ class ReportMailer < ApplicationMailer
 
     # ── Progression corporelle ─────────────────────────────────────────────
     entries = parse_json_array(user.body_entries_data)
-      .select { |e| e['weight'].present? }
-      .sort_by { |e| e['date'].to_s }
+      .select { |e| e["weight"].present? }
+      .sort_by { |e| e["date"].to_s }
 
-    @latest_weight  = entries.last&.dig('weight')
-    @previous_weight = entries.length >= 2 ? entries[-2]&.dig('weight') : nil
+    @latest_weight  = entries.last&.dig("weight")
+    @previous_weight = entries.length >= 2 ? entries[-2]&.dig("weight") : nil
     @weight_delta   = (@latest_weight && @previous_weight) ?
                         (@latest_weight.to_f - @previous_weight.to_f).round(1) : nil
 
@@ -333,11 +332,11 @@ class ReportMailer < ApplicationMailer
     @ai_total     = usages.count
 
     @activity_level = case @ai_analyses
-                      when 0     then :inactive
-                      when 1..3  then :low
-                      when 4..10 then :medium
-                      else            :high
-                      end
+    when 0     then :inactive
+    when 1..3  then :low
+    when 4..10 then :medium
+    else            :high
+    end
 
     # ── Abonnement ────────────────────────────────────────────────────────
     @expires_at     = user.subscription_expires_at
@@ -357,8 +356,8 @@ class ReportMailer < ApplicationMailer
 
     # ── Meilleur repas (score santé le plus élevé) ────────────────────────
     @best_meal = @period_meals
-      .max_by { |m| (m.dig('result', 'healthScore') || 0).to_i }
-      &.dig('result', 'name') || '—'
+      .max_by { |m| (m.dig("result", "healthScore") || 0).to_i }
+      &.dig("result", "name") || "—"
 
     # ── Macros % pour le donut SVG ────────────────────────────────────────
     total_macro_kcal = (@total_protein * 4) + (@total_carbs * 4) + (@total_fat * 9)
@@ -381,8 +380,8 @@ class ReportMailer < ApplicationMailer
 
     # ── Checkpoints poids (jusqu'à 4 points pour le graphe) ─────────────
     @weight_checkpoints = (parse_json_array(user.body_entries_data)
-      .select { |e| e['weight'].present? && e['date'].present? }
-      .sort_by { |e| e['date'].to_s }
+      .select { |e| e["weight"].present? && e["date"].present? }
+      .sort_by { |e| e["date"].to_s }
       .last(4))
 
     # ── URLs configurables depuis AppConfig ───────────────────────────────
@@ -414,36 +413,36 @@ class ReportMailer < ApplicationMailer
 
   def period_start_for(plan)
     case plan.email_report_frequency
-    when 'daily'   then 1.day.ago.beginning_of_day
-    when 'weekly'  then 1.week.ago.beginning_of_day
-    when 'monthly' then 1.month.ago.beginning_of_day
+    when "daily"   then 1.day.ago.beginning_of_day
+    when "weekly"  then 1.week.ago.beginning_of_day
+    when "monthly" then 1.month.ago.beginning_of_day
     else 1.week.ago.beginning_of_day
     end
   end
 
   def period_days(plan)
     case plan.email_report_frequency
-    when 'daily'   then 1
-    when 'weekly'  then 7
-    when 'monthly' then 30
+    when "daily"   then 1
+    when "weekly"  then 7
+    when "monthly" then 30
     else 7
     end
   end
 
   def period_label(plan)
     case plan.email_report_frequency
-    when 'daily'   then Date.yesterday.strftime("%-d %B %Y")
-    when 'weekly'  then "#{1.week.ago.strftime("%-d %b")} – #{Date.current.strftime("%-d %b %Y")}"
-    when 'monthly' then 1.month.ago.strftime("%B %Y").capitalize
+    when "daily"   then Date.yesterday.strftime("%-d %B %Y")
+    when "weekly"  then "#{1.week.ago.strftime("%-d %b")} – #{Date.current.strftime("%-d %b %Y")}"
+    when "monthly" then 1.month.ago.strftime("%B %Y").capitalize
     else Date.current.strftime("%B %Y")
     end
   end
 
   def subject_for(plan, t = REPORT_T["fr"])
     case plan.email_report_frequency
-    when 'daily'   then t[:subject_daily]
-    when 'weekly'  then t[:subject_weekly]
-    when 'monthly' then t[:subject_monthly]
+    when "daily"   then t[:subject_daily]
+    when "weekly"  then t[:subject_weekly]
+    when "monthly" then t[:subject_monthly]
     else t[:subject_default]
     end
   end

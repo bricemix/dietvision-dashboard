@@ -21,7 +21,7 @@ class SendPlanReportsJob < ApplicationJob
   def perform
     today = Date.current
 
-    Plan.where.not(email_report_frequency: ['never', nil]).each do |plan|
+    Plan.where.not(email_report_frequency: [ "never", nil ]).each do |plan|
       next unless should_send_today?(plan, today)
 
       # Tous les utilisateurs actifs sur ce plan (vérification abonnement si nécessaire)
@@ -44,16 +44,16 @@ class SendPlanReportsJob < ApplicationJob
   # Vérifie si le plan doit être envoyé aujourd'hui selon sa fréquence.
   def should_send_today?(plan, today)
     case plan.email_report_frequency
-    when 'daily'
+    when "daily"
       true  # toujours
-    when 'weekly'
+    when "weekly"
       day_map = {
-        'monday'    => 1, 'tuesday'  => 2, 'wednesday' => 3, 'thursday' => 4,
-        'friday'    => 5, 'saturday' => 6, 'sunday'    => 7
+        "monday"    => 1, "tuesday"  => 2, "wednesday" => 3, "thursday" => 4,
+        "friday"    => 5, "saturday" => 6, "sunday"    => 7
       }
       configured_day = day_map[plan.email_report_day.to_s.downcase] || 1
       today.cwday == configured_day
-    when 'monthly'
+    when "monthly"
       today.day == 1  # premier du mois
     else
       false
@@ -62,12 +62,12 @@ class SendPlanReportsJob < ApplicationJob
 
   # Retourne les utilisateurs éligibles pour ce plan (actifs + abonnement valide si premium).
   def eligible_users_for_plan(plan)
-    users = User.where(plan: plan.slug, status: 'active')
+    users = User.where(plan: plan.slug, status: "active")
 
     # Pour les plans payants, on vérifie aussi que l'abonnement n'est pas expiré
     if plan.price_eur_cents.to_i > 0
       users = users.where(
-        'subscription_expires_at IS NULL OR subscription_expires_at > ?', Time.current
+        "subscription_expires_at IS NULL OR subscription_expires_at > ?", Time.current
       )
     end
 

@@ -28,7 +28,7 @@ namespace :stripe do
 
       begin
         session = Stripe::Checkout::Session.retrieve(
-          { id: session_id, expand: ["subscription"] }
+          { id: session_id, expand: [ "subscription" ] }
         )
 
         if session.payment_status != "paid"

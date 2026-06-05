@@ -74,7 +74,7 @@ module Admin
 
     def bulk_generate
       prefix         = params[:prefix].to_s.upcase.gsub(/[^A-Z0-9]/, "")
-      count          = [[params[:count].to_i, 1].max, 200].min
+      count          = [ [ params[:count].to_i, 1 ].max, 200 ].min
       discount_type  = params[:discount_type].presence_in(%w[percent fixed]) || "percent"
       discount_value = params[:discount_value].to_f
       expires_at     = params[:expires_at].present? ? Time.zone.parse(params[:expires_at]) : nil

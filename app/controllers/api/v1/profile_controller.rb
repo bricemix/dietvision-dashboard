@@ -1,4 +1,4 @@
-require 'json'
+require "json"
 
 module Api
   module V1
@@ -42,7 +42,7 @@ module Api
       def fitai_update
         body = json_body
         # Accept both top-level keys and nested fitai_profile key
-        profile_data = body['fitai_profile'] || body
+        profile_data = body["fitai_profile"] || body
 
         if current_user.update(fitai_profile: profile_data.to_json)
           render json: { ok: true, fitai_profile: profile_data }
@@ -63,10 +63,10 @@ module Api
       # PUT /api/v1/user/body_entries
       def body_entries_update
         body = json_body
-        entries_data = body['body_entries'] || body
+        entries_data = body["body_entries"] || body
 
         unless entries_data.is_a?(Array)
-          render json: { error: 'Format invalide — attendu un tableau de mesures' }, status: :bad_request
+          render json: { error: "Format invalide — attendu un tableau de mesures" }, status: :bad_request
           return
         end
 
@@ -89,10 +89,10 @@ module Api
       # PUT /api/v1/user/meals
       def meals_update
         body = json_body
-        meals_data = body['meals'] || body
+        meals_data = body["meals"] || body
 
         unless meals_data.is_a?(Array)
-          render json: { error: 'Format invalide — attendu un tableau de repas' }, status: :bad_request
+          render json: { error: "Format invalide — attendu un tableau de repas" }, status: :bad_request
           return
         end
 
@@ -116,10 +116,10 @@ module Api
       def planning_update
         body = json_body
         # Accept {"planning":[...]} or {"days":[...]} or raw array
-        plans_data = body['planning'] || body['days'] || body
+        plans_data = body["planning"] || body["days"] || body
 
         unless plans_data.is_a?(Array)
-          render json: { error: 'Format invalide — attendu un tableau de jours' }, status: :bad_request
+          render json: { error: "Format invalide — attendu un tableau de jours" }, status: :bad_request
           return
         end
 

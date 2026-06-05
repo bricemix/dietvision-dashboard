@@ -190,7 +190,7 @@ module Admin
         "email_report_tip_fr"      => "Conseil affiché dans le rapport — version française",
         "email_report_tip_en"      => "Conseil affiché dans le rapport — version anglaise (us/en)",
         "email_report_tip_de"      => "Conseil affiché dans le rapport — version allemande",
-        "email_report_tip_es"      => "Conseil affiché dans le rapport — version espagnole",
+        "email_report_tip_es"      => "Conseil affiché dans le rapport — version espagnole"
       }[key]
     end
   end
