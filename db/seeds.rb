@@ -2,7 +2,7 @@
 [
   { name: "Test User",    email: "test@dietvision.app",  password: "Test1234!", phone: "+225 07 00 00 01", country: "CI", plan: "free" },
   { name: "Marie Konan",  email: "marie@dietvision.app", password: "Test1234!", phone: "+225 05 00 00 02", country: "CI", plan: "premium",
-    subscription_expires_at: 1.year.from_now },
+    subscription_expires_at: 1.year.from_now }
 ].each do |attrs|
   u = User.find_or_initialize_by(email: attrs[:email])
   u.assign_attributes(attrs)

@@ -60,9 +60,9 @@ module Admin
       @subscriptions = @user.subscriptions.order(created_at: :desc)
       @api_usages    = ApiUsage.where(user: @user).order(created_at: :desc).limit(50)  # BUG-10 : réduit de 200 à 50
       @all_payments  = @user.payments.order(created_at: :desc)
-      @fitai_profile = begin; JSON.parse(@user.fitai_profile || '{}'); rescue; {}; end
-      @body_entries  = begin; JSON.parse(@user.body_entries_data || '[]'); rescue; []; end
-      @planning_data = begin; JSON.parse(@user.planning_data || '{}'); rescue; {}; end
+      @fitai_profile = begin; JSON.parse(@user.fitai_profile || "{}"); rescue; {}; end
+      @body_entries  = begin; JSON.parse(@user.body_entries_data || "[]"); rescue; []; end
+      @planning_data = begin; JSON.parse(@user.planning_data || "{}"); rescue; {}; end
       @usage_by_day  = ApiUsage.where(user: @user).by_day(30)
       @plans         = Plan.order(:position, :id)
     end
@@ -114,10 +114,10 @@ module Admin
     # ── Données utilisateur ───────────────────────────────────────
     def data
       @user          = User.find(params[:id])
-      @meals_data    = begin; JSON.parse(@user.meals_data    || '[]'); rescue; []; end
-      @fitai_profile = begin; JSON.parse(@user.fitai_profile || '{}'); rescue; {}; end
-      @body_entries  = begin; JSON.parse(@user.body_entries_data || '[]'); rescue; []; end
-      @planning_data = begin; JSON.parse(@user.planning_data || '[]'); rescue; []; end
+      @meals_data    = begin; JSON.parse(@user.meals_data    || "[]"); rescue; []; end
+      @fitai_profile = begin; JSON.parse(@user.fitai_profile || "{}"); rescue; {}; end
+      @body_entries  = begin; JSON.parse(@user.body_entries_data || "[]"); rescue; []; end
+      @planning_data = begin; JSON.parse(@user.planning_data || "[]"); rescue; []; end
     end
 
     # Supprime un type de données (ou toutes)

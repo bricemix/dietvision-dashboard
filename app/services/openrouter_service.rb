@@ -165,10 +165,10 @@ class OpenrouterService
 
   def conn
     @conn ||= Faraday.new(url: BASE_URL) do |f|
-      f.request  :retry, max: 2, exceptions: [Faraday::TimeoutError, Faraday::ConnectionFailed]
+      f.request  :retry, max: 2, exceptions: [ Faraday::TimeoutError, Faraday::ConnectionFailed ]
       f.options.timeout      = 60   # 60s read timeout (images prennent du temps)
       f.options.open_timeout = 30   # 30s connect timeout
-      f.adapter  Faraday.default_adapter
+      f.adapter Faraday.default_adapter
     end
   end
 

@@ -156,7 +156,7 @@ module Admin
                     alert: "#{parts.join(' — ')} — #{errors.size} erreur(s) : #{errors.join(' | ')}"
       else
         redirect_to admin_plans_path,
-                    notice: parts.join(' — ').presence || "Aucun plan à synchroniser"
+                    notice: parts.join(" — ").presence || "Aucun plan à synchroniser"
       end
     end
 

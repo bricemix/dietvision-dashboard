@@ -146,7 +146,7 @@ class StripeService
 
     session = Stripe::Checkout::Session.create(
       customer:    customer.id,
-      line_items:  [{ price: plan.stripe_price_id, quantity: 1 }],
+      line_items:  [ { price: plan.stripe_price_id, quantity: 1 } ],
       mode:        "subscription",
       allow_promotion_codes: true,           # ← Champ "Code promo" sur la page Stripe
       success_url: "https://api.diet-vision.com/payment/success?session_id={CHECKOUT_SESSION_ID}",
@@ -431,13 +431,13 @@ class StripeService
   # monthly → ["month", 1] | quarterly → ["month", 3] | semi_annual → ["month", 6] | yearly → ["year", 1]
   def stripe_interval(billing_frequency)
     case billing_frequency
-    when "monthly"    then ["month", 1]
-    when "quarterly"  then ["month", 3]
-    when "semi_annual" then ["month", 6]  # BUG FIXÉ : était traité comme mensuel (fallback else)
-    when "yearly"     then ["year",  1]
+    when "monthly"    then [ "month", 1 ]
+    when "quarterly"  then [ "month", 3 ]
+    when "semi_annual" then [ "month", 6 ]  # BUG FIXÉ : était traité comme mensuel (fallback else)
+    when "yearly"     then [ "year",  1 ]
     else
       Rails.logger.warn("[StripeService] billing_frequency inconnu : #{billing_frequency.inspect} — fallback mensuel")
-      ["month", 1]
+      [ "month", 1 ]
     end
   end
 end

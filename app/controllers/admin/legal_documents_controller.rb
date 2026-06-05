@@ -1,6 +1,5 @@
 module Admin
   class LegalDocumentsController < BaseController
-
     def index
       # Groupe par type puis région pour l'affichage
       @docs_by_type = {}

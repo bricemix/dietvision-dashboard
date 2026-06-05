@@ -6,10 +6,10 @@ class Plan < ApplicationRecord
 
   EMAIL_FREQUENCIES = %w[never daily weekly monthly].freeze
   EMAIL_FREQUENCY_LABELS = {
-    'never'   => 'Jamais',
-    'daily'   => 'Quotidien',
-    'weekly'  => 'Hebdomadaire',
-    'monthly' => 'Mensuel'
+    "never"   => "Jamais",
+    "daily"   => "Quotidien",
+    "weekly"  => "Hebdomadaire",
+    "monthly" => "Mensuel"
   }.freeze
 
   OPERATOR_LABELS = {
@@ -31,7 +31,7 @@ class Plan < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :billing_frequency, inclusion: { in: FREQUENCIES }
 
-  before_validation { self.slug = name.to_s.downcase.strip.gsub(/\s+/, '-').gsub(/[^a-z0-9\-]/, '') if slug.blank? }
+  before_validation { self.slug = name.to_s.downcase.strip.gsub(/\s+/, "-").gsub(/[^a-z0-9\-]/, "") if slug.blank? }
 
   scope :active,    -> { where(status: "active").order(:position, :id) }
   scope :published, -> { where(status: %w[active inactive]).order(:position, :id) }

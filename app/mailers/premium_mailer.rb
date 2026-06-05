@@ -1,5 +1,4 @@
 class PremiumMailer < ApplicationMailer
-
   # Bilan hebdomadaire envoyé chaque lundi aux utilisateurs premium
   def weekly_digest(user)
     @user = user
@@ -30,11 +29,11 @@ class PremiumMailer < ApplicationMailer
 
     # Niveau d'activité
     @activity_level = case @analyses_count
-                      when 0     then "inactive"
-                      when 1..3  then "low"
-                      when 4..10 then "medium"
-                      else            "high"
-                      end
+    when 0     then "inactive"
+    when 1..3  then "low"
+    when 4..10 then "medium"
+    else            "high"
+    end
 
     mail(
       to:      "#{user.name} <#{user.email}>",

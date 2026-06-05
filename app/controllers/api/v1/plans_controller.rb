@@ -33,7 +33,7 @@ module Api
           stripe_price_id:           plan.stripe_price_id,
           prices:                    plan.prices,
           translations:              plan.respond_to?(:translations) ? plan.translations : {},
-          email_report_frequency:    plan.respond_to?(:email_report_frequency) ? plan.email_report_frequency : 'never'
+          email_report_frequency:    plan.respond_to?(:email_report_frequency) ? plan.email_report_frequency : "never"
         }
       end
     end

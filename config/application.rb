@@ -31,7 +31,7 @@ module DietvisionDashboard
         resource "/api/*",
                  headers: :any,
                  methods: %i[get post put patch delete options head],
-                 expose: ["Authorization"],
+                 expose: [ "Authorization" ],
                  max_age: 600
       end
     end

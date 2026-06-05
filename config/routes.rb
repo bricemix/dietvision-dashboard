@@ -146,8 +146,8 @@ Rails.application.routes.draw do
   end
 
   # Pages de retour Stripe Checkout (success / cancel)
-  get  'payment/success', to: 'payment_pages#success', as: :payment_success
-  get  'payment/cancel',  to: 'payment_pages#cancel',  as: :payment_cancel
+  get  "payment/success", to: "payment_pages#success", as: :payment_success
+  get  "payment/cancel",  to: "payment_pages#cancel",  as: :payment_cancel
 
   # Redirection racine vers l'admin
   root to: redirect("/admin")

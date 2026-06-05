@@ -48,11 +48,11 @@ module ApplicationHelper
   # Couleur badge opérateur
   def operator_badge(provider)
     color = case provider.to_s
-            when "mvola"        then "background:#e84393;color:#fff"
-            when "orange_money" then "background:#ff7900;color:#fff"
-            when "airtel_money" then "background:#e40000;color:#fff"
-            else "background:#374151;color:#9ca3af"
-            end
+    when "mvola"        then "background:#e84393;color:#fff"
+    when "orange_money" then "background:#ff7900;color:#fff"
+    when "airtel_money" then "background:#e40000;color:#fff"
+    else "background:#374151;color:#9ca3af"
+    end
     content_tag :span, operator_label(provider),
                 style: "#{color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px"
   end

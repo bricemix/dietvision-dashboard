@@ -1,6 +1,5 @@
 module Admin
   class TrialController < BaseController
-
     def index
       # Config actuelle
       @trial_enabled        = AppConfig.get("trial_enabled") != "false"
