@@ -1,6 +1,10 @@
 class StripeService
   def initialize
-    Stripe.api_key = AppConfig.stripe_secret_key || ENV["STRIPE_SECRET_KEY"]
+    @api_key = AppConfig.stripe_secret_key || ENV["STRIPE_SECRET_KEY"]
+    # Clé passée par-appel (thread-safe) — évite la race sur Stripe.api_key global.
+    @opts = { api_key: @api_key }
+    # On positionne aussi la globale pour les appels Stripe directs hors service.
+    Stripe.api_key = @api_key
   end
 
   # ── Customer ─────────────────────────────────────────────────────────────────
@@ -9,24 +13,24 @@ class StripeService
 
   def find_or_create_customer(user)
     if user.stripe_customer_id.present?
-      Stripe::Customer.retrieve(user.stripe_customer_id)
+      Stripe::Customer.retrieve(user.stripe_customer_id, @opts)
     else
-      customer = Stripe::Customer.create(
+      customer = Stripe::Customer.create({
         email:    user.email,
         name:     user.name,
         metadata: { user_id: user.id, app: "dietvision" }
-      )
+      }, @opts)
       user.update_column(:stripe_customer_id, customer.id)
       customer
     end
   rescue Stripe::InvalidRequestError => e
     # Customer supprimé côté Stripe → on en recrée un
     Rails.logger.warn("Stripe customer #{user.stripe_customer_id} introuvable, recréation : #{e.message}")
-    customer = Stripe::Customer.create(
+    customer = Stripe::Customer.create({
       email:    user.email,
       name:     user.name,
       metadata: { user_id: user.id, app: "dietvision" }
-    )
+    }, @opts)
     user.update_column(:stripe_customer_id, customer.id)
     customer
   end
@@ -43,24 +47,24 @@ class StripeService
 
     # 1. Créer ou retrouver le Produit Stripe
     product = if plan.stripe_product_id.present?
-      Stripe::Product.retrieve(plan.stripe_product_id) rescue nil
+      Stripe::Product.retrieve(plan.stripe_product_id, @opts) rescue nil
     end
 
     if product.nil?
-      product = Stripe::Product.create(
+      product = Stripe::Product.create({
         name:        plan.name,
         description: plan.description.presence || plan.name,
         metadata:    { plan_id: plan.id, plan_slug: plan.slug, app: "dietvision" }
-      )
+      }, @opts)
       plan.update_column(:stripe_product_id, product.id)
     else
       # Mettre à jour le nom si changé
-      Stripe::Product.update(product.id, name: plan.name) rescue nil
+      Stripe::Product.update(product.id, { name: plan.name }, @opts) rescue nil
     end
 
     # 2. Archiver l'ancien prix si existant (Stripe ne permet pas de modifier un prix)
     if plan.stripe_price_id.present?
-      Stripe::Price.update(plan.stripe_price_id, active: false) rescue nil
+      Stripe::Price.update(plan.stripe_price_id, { active: false }, @opts) rescue nil
     end
 
     # 3. Créer le nouveau prix récurrent
@@ -72,7 +76,7 @@ class StripeService
       metadata:  { plan_id: plan.id, plan_slug: plan.slug }
     }
 
-    price = Stripe::Price.create(price_params)
+    price = Stripe::Price.create(price_params, @opts)
     plan.update_column(:stripe_price_id, price.id)
 
     Rails.logger.info("Stripe sync : plan #{plan.name} → price #{price.id}")
@@ -87,7 +91,7 @@ class StripeService
   def sync_promo_code_to_stripe(promo_code)
     # 1. Créer ou retrouver le Coupon Stripe
     coupon = if promo_code.stripe_coupon_id.present?
-      Stripe::Coupon.retrieve(promo_code.stripe_coupon_id) rescue nil
+      Stripe::Coupon.retrieve(promo_code.stripe_coupon_id, @opts) rescue nil
     end
 
     if coupon.nil?
@@ -105,7 +109,7 @@ class StripeService
         coupon_params[:currency]   = "eur"
       end
 
-      coupon = Stripe::Coupon.create(coupon_params)
+      coupon = Stripe::Coupon.create(coupon_params, @opts)
       promo_code.update_column(:stripe_coupon_id, coupon.id)
     end
 
@@ -113,7 +117,7 @@ class StripeService
     # Si un code existe déjà côté Stripe, on l'archive et on en recrée un
     if promo_code.stripe_promotion_code_id.present?
       begin
-        Stripe::PromotionCode.update(promo_code.stripe_promotion_code_id, active: false)
+        Stripe::PromotionCode.update(promo_code.stripe_promotion_code_id, { active: false }, @opts)
       rescue Stripe::InvalidRequestError
         nil
       end
@@ -127,7 +131,7 @@ class StripeService
     promo_params[:max_redemptions] = promo_code.max_uses_total if promo_code.max_uses_total.present?
     promo_params[:expires_at]      = promo_code.expires_at.to_i if promo_code.expires_at.present?
 
-    promotion = Stripe::PromotionCode.create(promo_params)
+    promotion = Stripe::PromotionCode.create(promo_params, @opts)
     promo_code.update_column(:stripe_promotion_code_id, promotion.id)
 
     Rails.logger.info("Stripe sync promo : #{promo_code.code} → coupon #{coupon.id} / promo #{promotion.id}")
@@ -139,32 +143,70 @@ class StripeService
   # mode: "subscription" → facturation récurrente gérée à 100% par Stripe.
   # NE PAS utiliser mode: "payment" pour les abonnements.
 
-  def create_checkout_session(user:, plan:)
+  def create_checkout_session(user:, plan:, locale: "fr")
     raise ArgumentError, "Plan sans Stripe Price ID" if plan.stripe_price_id.blank?
 
     customer = find_or_create_customer(user)
 
-    session = Stripe::Checkout::Session.create(
+    # Normalise la locale app vers une locale Stripe valide.
+    # Stripe accepte : fr, en, de, es, pt, it, nl, ja, zh, etc.
+    # Notre "us" = anglais → "en". Fallback sur "fr" pour les inconnues.
+    stripe_locale = stripe_locale_for(locale)
+
+    session = Stripe::Checkout::Session.create({
       customer:    customer.id,
       line_items:  [{ price: plan.stripe_price_id, quantity: 1 }],
       mode:        "subscription",
+      locale:      stripe_locale,
       allow_promotion_codes: true,           # ← Champ "Code promo" sur la page Stripe
-      success_url: "https://api.diet-vision.com/payment/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url:  "https://api.diet-vision.com/payment/cancel",
+      success_url: "https://api.diet-vision.com/payment/success?session_id={CHECKOUT_SESSION_ID}&locale=#{stripe_locale}",
+      cancel_url:  "https://api.diet-vision.com/payment/cancel?locale=#{stripe_locale}",
       subscription_data: {
         metadata: { user_id: user.id, plan_id: plan.id, plan_slug: plan.slug }
       },
       metadata: { user_id: user.id, plan_id: plan.id, plan_slug: plan.slug }
-    )
+    }, @opts)
 
     { checkout_url: session.url, session_id: session.id }
+  end
+
+  # ── Customer Portal ──────────────────────────────────────────────────────────
+  # Crée une session Stripe Billing Portal pour que l'utilisateur puisse
+  # gérer son abonnement (annuler, changer carte, voir factures).
+  # Retourne l'URL du portail à ouvrir dans le navigateur.
+
+  def create_portal_session(customer_id:, return_url:)
+    session = Stripe::BillingPortal::Session.create({
+      customer:   customer_id,
+      return_url: return_url
+    }, @opts)
+    session.url
   end
 
   # ── Webhook dispatcher ────────────────────────────────────────────────────────
 
   def construct_event(payload, signature)
-    webhook_secret = AppConfig.stripe_webhook_secret || ENV["STRIPE_WEBHOOK_SECRET"]
-    Stripe::Webhook.construct_event(payload, signature, webhook_secret)
+    # Vérifie la signature contre TOUS les secrets disponibles (live + test + ENV).
+    # Stripe peut envoyer des événements test (livemode:false) signés avec le
+    # secret test ET des événements live signés avec le secret live, parfois sur
+    # la même URL d'endpoint. On accepte celui qui matche.
+    secrets = [
+      AppConfig.get("stripe_webhook_secret"),
+      AppConfig.get("stripe_webhook_secret_test"),
+      ENV["STRIPE_WEBHOOK_SECRET"]
+    ].map { |x| x.to_s.strip }.reject(&:blank?).uniq
+
+    raise Stripe::SignatureVerificationError.new("Aucun webhook secret configuré", signature) if secrets.empty?
+
+    last_error = nil
+    secrets.each do |secret|
+      begin
+        return Stripe::Webhook.construct_event(payload, signature, secret)
+      rescue Stripe::SignatureVerificationError => e
+        last_error = e
+      end
+    end
+    raise last_error
   end
 
   def handle_event(event)
@@ -221,8 +263,10 @@ class StripeService
   # expires_at est défini par Stripe (current_period_end) — JAMAIS calculé en dur.
 
   def handle_invoice_paid(event)
-    invoice                = event.data.object
-    stripe_subscription_id = invoice.subscription
+    invoice = event.data.object
+    # Compatibilité Stripe API 2026-04-22.dahlia : invoice.subscription a été
+    # déplacé vers invoice.parent.subscription_details.subscription dans le nouvel objet Invoice.
+    stripe_subscription_id = invoice_subscription_id(invoice)
     return unless stripe_subscription_id.present?
 
     user = User.find_by(stripe_customer_id: invoice.customer)
@@ -238,7 +282,7 @@ class StripeService
     stripe_sub = nil
     expires_at = nil
     begin
-      stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id)
+      stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id, @opts)
       expires_at = Time.at(period_end(stripe_sub)).utc
     rescue => e
       # Si l'API Stripe échoue (mauvaise clé, réseau) → calculer expires_at localement
@@ -318,7 +362,7 @@ class StripeService
     end
 
     # ── ÉTAPE 3 : Notification email ───────────────────────────────────────────
-    UserMailer.subscription_activated(user, expires_at).deliver_later rescue nil
+    UserMailer.subscription_activated(user, expires_at, plan_level: plan_level).deliver_later rescue nil
   end
 
   # ── invoice.payment_failed ────────────────────────────────────────────────────
@@ -330,11 +374,25 @@ class StripeService
     user    = User.find_by(stripe_customer_id: invoice.customer)
     return unless user
 
-    # Passer en past_due (accès conservé le temps des relances Stripe)
-    subscription = Subscription.find_by(stripe_subscription_id: invoice.subscription)
-    subscription&.update!(status: "past_due") rescue nil
+    subscription = Subscription.find_by(stripe_subscription_id: invoice_subscription_id(invoice))
 
-    Rails.logger.warn("Stripe invoice.payment_failed : #{user.email}")
+    if subscription
+      # Premier paiement jamais reussi (pending/incomplete) :
+      # retrograder immediatement en free pour eviter acces premium gratuit.
+      first_payment_failure = subscription.payments.where(status: "success").none? &&
+                              subscription.status.in?(%w[pending incomplete])
+
+      if first_payment_failure
+        subscription.update!(status: "cancelled", expires_at: Time.current) rescue nil
+        user.update!(plan: "free", subscription_expires_at: nil) rescue nil
+        Rails.logger.warn("[StripeService] invoice.payment_failed (1er paiement) : #{user.email} -> retrograde free")
+      else
+        # Renouvellement echoue -> garder acces pendant les relances Stripe
+        subscription.update!(status: "past_due") rescue nil
+        Rails.logger.warn("[StripeService] invoice.payment_failed (renouvellement) : #{user.email} -> past_due")
+      end
+    end
+
     UserMailer.payment_failed(user).deliver_later rescue nil
   end
 
@@ -390,6 +448,45 @@ class StripeService
 
   def log_warn(msg)
     Rails.logger.warn("[StripeService] #{msg}")
+  end
+
+  # Mappe nos locales internes vers des locales Stripe valides.
+  # Stripe ref : https://docs.stripe.com/js/appendix/supported_locales
+  def stripe_locale_for(locale)
+    case locale.to_s.downcase
+    when "fr"         then "fr"
+    when "de"         then "de"
+    when "es"         then "es"
+    when "pt"         then "pt"
+    when "en", "us"   then "en"
+    when "it"         then "it"
+    when "nl"         then "nl"
+    when "ja"         then "ja"
+    when "zh"         then "zh"
+    else                   "fr"   # fallback
+    end
+  end
+
+  # Extrait le stripe_subscription_id depuis un objet Invoice Stripe,
+  # compatible avec l'ancienne API (invoice.subscription)
+  # ET la nouvelle API 2026-04-22.dahlia (invoice.parent.subscription_details.subscription).
+  def invoice_subscription_id(invoice)
+    # Ancien format : invoice.subscription = "sub_xxx"
+    sub_id = invoice.respond_to?(:subscription) ? invoice.subscription.presence : nil
+    return sub_id if sub_id.present?
+
+    # Nouveau format (2026-04-22.dahlia) : invoice.parent.subscription_details.subscription
+    parent = invoice.respond_to?(:parent) ? invoice.parent : nil
+    return nil unless parent
+
+    if parent.respond_to?(:subscription_details) && parent.subscription_details.present?
+      parent.subscription_details.subscription.presence
+    else
+      nil
+    end
+  rescue => e
+    Rails.logger.warn("[StripeService] invoice_subscription_id extraction failed: #{e.message}")
+    nil
   end
 
   # Retourne le niveau de plan normalisé ("starter" | "pro" | "premium")

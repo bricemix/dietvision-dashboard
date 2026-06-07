@@ -50,7 +50,7 @@
               <% if u.status == "error" %>
                 <button
                   type="button"
-                  onclick="showErrorModal(this)"
+                  data-usage-error="1"
                   data-endpoint="<%= u.endpoint %>"
                   data-date="<%= u.created_at.strftime("%d/%m/%Y %H:%M:%S") %>"
                   data-model="<%= u.model %>"
@@ -83,7 +83,7 @@
 <%# ── Modal erreur ──────────────────────────────────────────────────────────── %>
 <div id="error-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
   <%# Overlay %>
-  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeErrorModal()"></div>
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-usage-close="1"></div>
 
   <%# Panneau %>
   <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
@@ -99,7 +99,7 @@
           </span>
           <span class="text-white font-semibold text-sm">Détail de l'erreur API</span>
         </div>
-        <button type="button" onclick="closeErrorModal()" class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-800">
+        <button type="button" data-usage-close="1" class="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-800">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -133,7 +133,7 @@
       <%# Footer %>
       <div class="px-5 pb-4 flex justify-between items-center">
         <span id="modal-duration" class="text-xs text-gray-600"></span>
-        <button type="button" onclick="closeErrorModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors font-medium">
+        <button type="button" data-usage-close="1" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors font-medium">
           Fermer
         </button>
       </div>
@@ -143,22 +143,35 @@
 </div>
 
 <script>
-  function showErrorModal(btn) {
-    document.getElementById('modal-endpoint').textContent = btn.dataset.endpoint;
-    document.getElementById('modal-model').textContent    = btn.dataset.model;
-    document.getElementById('modal-date').textContent     = btn.dataset.date;
-    document.getElementById('modal-error').textContent    = btn.dataset.error;
-    document.getElementById('modal-duration').textContent = btn.dataset.duration + ' ms';
-    document.getElementById('error-modal').classList.remove('hidden');
+(function () {
+  if (window.__dvUsageModalBound) return;
+  window.__dvUsageModalBound = true;
+
+  function openModal(btn) {
+    var set = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+    set('modal-endpoint', btn.dataset.endpoint || '');
+    set('modal-model',    btn.dataset.model || '');
+    set('modal-date',     btn.dataset.date || '');
+    set('modal-error',    btn.dataset.error || 'Aucun détail enregistré');
+    set('modal-duration', (btn.dataset.duration || '') + ' ms');
+    var m = document.getElementById('error-modal');
+    if (m) m.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
-
-  function closeErrorModal() {
-    document.getElementById('error-modal').classList.add('hidden');
+  function closeModal() {
+    var m = document.getElementById('error-modal');
+    if (m) m.classList.add('hidden');
     document.body.style.overflow = '';
   }
 
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeErrorModal();
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-usage-error]');
+    if (btn) { openModal(btn); return; }
+    if (e.target.closest('[data-usage-close]')) { closeModal(); }
   });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+})();
 </script>
+

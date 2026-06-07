@@ -6,11 +6,15 @@ class AppConfig < ApplicationRecord
     openrouter_api_key
     openrouter_default_model
     openrouter_vision_model
-    free_plan_daily_limit
+    free_scan_daily_limit
+    free_chat_daily_limit
+    starter_scan_daily_limit
+    starter_chat_daily_limit
+    trial_scan_daily_limit
+    trial_chat_daily_limit
     pro_plan_daily_limit
     premium_plan_daily_limit
     vip_plan_daily_limit
-    trial_plan_daily_limit
     pro_dishes_daily_limit
     premium_dishes_daily_limit
     vip_dishes_daily_limit
@@ -61,17 +65,28 @@ class AppConfig < ApplicationRecord
   end
 
   def self.openrouter_api_key      = get("openrouter_api_key")
-  def self.default_model           = get("openrouter_default_model") || "google/gemini-2.0-flash-001"
-  def self.vision_model            = get("openrouter_vision_model") || "google/gemini-2.0-flash-001"
-  def self.free_daily_limit        = get("free_plan_daily_limit")&.to_i || 3
-  def self.pro_daily_limit         = get("pro_plan_daily_limit")&.to_i || 30
-  def self.premium_daily_limit     = get("premium_plan_daily_limit")&.to_i || 75
+  def self.default_model           = get("openrouter_default_model") || "google/gemini-2.5-flash"
+  def self.vision_model            = get("openrouter_vision_model") || "google/gemini-2.5-flash"
+  # Limites scan (analyze_food) par plan
+  def self.free_scan_daily_limit     = get("free_scan_daily_limit")&.to_i    || 3
+  def self.starter_scan_daily_limit  = get("starter_scan_daily_limit")&.to_i || 20
+  def self.trial_scan_daily_limit    = get("trial_scan_daily_limit")&.to_i   || 10
+  # Limites chat (coach_chat) par plan — 999 = illimité
+  def self.free_chat_daily_limit     = get("free_chat_daily_limit")&.to_i    || 5
+  def self.starter_chat_daily_limit  = get("starter_chat_daily_limit")&.to_i || 999
+  def self.trial_chat_daily_limit    = get("trial_chat_daily_limit")&.to_i   || 10
+  # Pro : 50 scans / 100 chats par jour
+  def self.pro_scan_daily_limit     = get("pro_scan_daily_limit")&.to_i     || 50
+  def self.pro_chat_daily_limit     = get("pro_chat_daily_limit")&.to_i     || 100
+  # Premium : 150 scans / 200 chats par jour
+  def self.premium_scan_daily_limit = get("premium_scan_daily_limit")&.to_i || 150
+  def self.premium_chat_daily_limit = get("premium_chat_daily_limit")&.to_i || 200
+  # VIP : illimité (999)
   def self.vip_daily_limit         = get("vip_plan_daily_limit")&.to_i || 999
-  def self.trial_daily_limit       = get("trial_plan_daily_limit")&.to_i || 20
   # Limites journalières — Plats recommandés (nombre de rafraîchissements)
   # Free/Trial : 0 (feature verrouillée côté Flutter + backend)
-  def self.pro_dishes_limit        = get("pro_dishes_daily_limit")&.to_i || 5
-  def self.premium_dishes_limit    = get("premium_dishes_daily_limit")&.to_i || 15
+  def self.pro_dishes_limit        = get("pro_dishes_daily_limit")&.to_i || 50
+  def self.premium_dishes_limit    = get("premium_dishes_daily_limit")&.to_i || 150
   def self.vip_dishes_limit        = get("vip_dishes_daily_limit")&.to_i || 999
   # Essai activé par défaut (opt-out) — désactiver explicitement avec "0" ou "false"
   def self.trial_enabled?
