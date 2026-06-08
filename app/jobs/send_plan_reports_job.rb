@@ -1,39 +1,42 @@
-# Envoie les rapports nutritionnels automatiques aux utilisateurs abonnés,
-# selon la fréquence configurée sur chaque plan.
+# Envoie les rapports nutritionnels automatiques selon le palier de plan.
 #
-# Doit être planifié via un scheduler (cron, Sidekiq-cron, Whenever, etc.)
-# pour s'exécuter chaque matin (ex : 08h00 UTC).
+# Pro     : mensuel
+# Premium : hebdomadaire
+# VIP     : quotidien + hebdomadaire + mensuel
 #
-# Exemple avec Whenever (config/schedule.rb) :
-#   every 1.day, at: '8:00 am' do
-#     runner "SendPlanReportsJob.perform_now"
-#   end
-#
-# Exemple avec Sidekiq-cron (config/initializers/sidekiq.rb) :
-#   Sidekiq::Cron::Job.create(
-#     name: 'Daily plan reports',
-#     cron: '0 8 * * *',
-#     class: 'SendPlanReportsJob'
-#   )
+# Planifié via cron (chaque matin) :
+#   0 7 * * *  bundle exec rails runner "SendPlanReportsJob.perform_now"
+# Le job décide lui-même quels rapports envoyer selon la date du jour.
 class SendPlanReportsJob < ApplicationJob
   queue_as :mailers
+
+  # Fréquences de rapport par palier (slug de base du plan)
+  TIER_FREQUENCIES = {
+    "pro"     => %w[monthly],
+    "premium" => %w[weekly],
+    "vip"     => %w[daily weekly monthly]
+  }.freeze
 
   def perform
     today = Date.current
 
-    Plan.where.not(email_report_frequency: ['never', nil]).each do |plan|
-      next unless should_send_today?(plan, today)
+    TIER_FREQUENCIES.each do |tier, frequencies|
+      plan = Plan.find_by(slug: tier)
+      next unless plan
 
-      # Tous les utilisateurs actifs sur ce plan (vérification abonnement si nécessaire)
-      users = eligible_users_for_plan(plan)
+      due = frequencies.select { |f| should_send_today?(f, today) }
+      next if due.empty?
 
-      Rails.logger.info "[SendPlanReportsJob] Plan '#{plan.name}' (#{plan.email_report_frequency}) → #{users.count} destinataire(s)"
+      users = eligible_users_for_tier(tier)
+      Rails.logger.info "[SendPlanReportsJob] #{tier}: #{due.join(',')} → #{users.count} destinataire(s)"
 
-      users.each do |user|
-        begin
-          ReportMailer.nutrition_report(user, plan).deliver_later
-        rescue => e
-          Rails.logger.error "[SendPlanReportsJob] Erreur pour user #{user.id} (#{user.email}): #{e.message}"
+      users.find_each do |user|
+        due.each do |freq|
+          begin
+            ReportMailer.nutrition_report(user, plan, frequency: freq).deliver_later
+          rescue => e
+            Rails.logger.error "[SendPlanReportsJob] #{tier}/#{freq} user #{user.id} (#{user.email}): #{e.message}"
+          end
         end
       end
     end
@@ -41,36 +44,19 @@ class SendPlanReportsJob < ApplicationJob
 
   private
 
-  # Vérifie si le plan doit être envoyé aujourd'hui selon sa fréquence.
-  def should_send_today?(plan, today)
-    case plan.email_report_frequency
-    when 'daily'
-      true  # toujours
-    when 'weekly'
-      day_map = {
-        'monday'    => 1, 'tuesday'  => 2, 'wednesday' => 3, 'thursday' => 4,
-        'friday'    => 5, 'saturday' => 6, 'sunday'    => 7
-      }
-      configured_day = day_map[plan.email_report_day.to_s.downcase] || 1
-      today.cwday == configured_day
-    when 'monthly'
-      today.day == 1  # premier du mois
-    else
-      false
+  # daily = tous les jours | weekly = le lundi | monthly = le 1er du mois
+  def should_send_today?(frequency, today)
+    case frequency
+    when "daily"   then true
+    when "weekly"  then today.monday?
+    when "monthly" then today.day == 1
+    else false
     end
   end
 
-  # Retourne les utilisateurs éligibles pour ce plan (actifs + abonnement valide si premium).
-  def eligible_users_for_plan(plan)
-    users = User.where(plan: plan.slug, status: 'active')
-
-    # Pour les plans payants, on vérifie aussi que l'abonnement n'est pas expiré
-    if plan.price_eur_cents.to_i > 0
-      users = users.where(
-        'subscription_expires_at IS NULL OR subscription_expires_at > ?', Time.current
-      )
-    end
-
-    users
+  # Utilisateurs actifs du palier avec abonnement non expiré
+  def eligible_users_for_tier(tier)
+    User.where(plan: tier, status: "active")
+        .where("subscription_expires_at IS NULL OR subscription_expires_at > ?", Time.current)
   end
 end

@@ -269,12 +269,33 @@ class ReportMailer < ApplicationMailer
   # @param user  [User]  le destinataire
   # @param plan  [Plan]  le plan auquel l'utilisateur est abonné
   # @param test_recipient [String, nil]  si présent, envoie à cette adresse au lieu de l'utilisateur
-  def nutrition_report(user, plan, test_recipient: nil)
+  def nutrition_report(user, plan, frequency: nil, test_recipient: nil)
     @user = user
     @plan = plan
+    @report_frequency = (frequency || plan.email_report_frequency).to_s
+
+    # ── Données de démo pour l'aperçu test ────────────────────────────────
+    if test_recipient.present?
+      user.meals_data = [
+        { 'date' => Date.current.to_s,        'result' => { 'name' => 'Poulet grillé & légumes verts', 'calories' => 580, 'protein' => 48, 'carbs' => 35, 'fat' => 20, 'healthScore' => 92 } },
+        { 'date' => (Date.current - 1).to_s,  'result' => { 'name' => 'Salade César au saumon',        'calories' => 420, 'protein' => 28, 'carbs' => 22, 'fat' => 18, 'healthScore' => 85 } },
+        { 'date' => (Date.current - 2).to_s,  'result' => { 'name' => 'Pasta bolognaise maison',       'calories' => 650, 'protein' => 35, 'carbs' => 72, 'fat' => 22, 'healthScore' => 65 } },
+        { 'date' => (Date.current - 3).to_s,  'result' => { 'name' => 'Smoothie protéiné banane',      'calories' => 310, 'protein' => 32, 'carbs' => 28, 'fat' =>  8, 'healthScore' => 78 } },
+        { 'date' => (Date.current - 4).to_s,  'result' => { 'name' => 'Omelette fromage & épinards',   'calories' => 380, 'protein' => 26, 'carbs' =>  4, 'fat' => 28, 'healthScore' => 70 } },
+        { 'date' => (Date.current - 5).to_s,  'result' => { 'name' => 'Riz basmati & dahl lentilles',  'calories' => 490, 'protein' => 22, 'carbs' => 68, 'fat' => 12, 'healthScore' => 80 } },
+        { 'date' => (Date.current - 6).to_s,  'result' => { 'name' => 'Steak & patate douce',          'calories' => 620, 'protein' => 52, 'carbs' => 42, 'fat' => 24, 'healthScore' => 88 } },
+      ].to_json
+      user.body_entries_data = [
+        { 'date' => (Date.current - 21).to_s, 'weight' => 79.2, 'bmi' => 24.8 },
+        { 'date' => (Date.current - 14).to_s, 'weight' => 78.5, 'bmi' => 24.6 },
+        { 'date' => (Date.current -  7).to_s, 'weight' => 77.8, 'bmi' => 24.4 },
+        { 'date' => Date.current.to_s,         'weight' => 77.1, 'bmi' => 24.2 },
+      ].to_json
+      user.fitai_profile = { 'tdee' => 2100, 'goal' => 'Perte de poids', 'dietType' => 'Équilibré' }.to_json
+    end
 
     # ── Données nutrition (depuis meals_data JSON) ──────────────────────────
-    period_start = period_start_for(plan)
+    period_start = period_start_for
     all_meals    = parse_json_array(user.meals_data)
 
     @period_meals = all_meals.select do |m|
@@ -287,7 +308,7 @@ class ReportMailer < ApplicationMailer
 
     @meals_count    = @period_meals.length
     @total_kcal     = @period_meals.sum { |m| (m.dig('result', 'calories') || 0).to_i }
-    @avg_kcal_day   = @meals_count > 0 ? (@total_kcal.to_f / period_days(plan)).round : 0
+    @avg_kcal_day   = @meals_count > 0 ? (@total_kcal.to_f / period_days).round : 0
     @total_protein  = @period_meals.sum { |m| (m.dig('result', 'protein') || 0).to_f }.round(1)
     @total_carbs    = @period_meals.sum { |m| (m.dig('result', 'carbs')   || 0).to_f }.round(1)
     @total_fat      = @period_meals.sum { |m| (m.dig('result', 'fat')     || 0).to_f }.round(1)
@@ -348,12 +369,13 @@ class ReportMailer < ApplicationMailer
     @locale = user.locale.presence || "fr"
     @locale = "fr" unless REPORT_T.key?(@locale)
     @t = REPORT_T[@locale]
+    @subject = subject_for(@t)
 
     # ── Période label ─────────────────────────────────────────────────────
-    @period_label   = period_label(plan)
-    @period_start   = period_start_for(plan).strftime("%-d %b")
+    @period_label   = period_label
+    @period_start   = period_start_for.strftime("%-d %b")
     @period_end     = Date.current.strftime("%-d %b %Y")
-    @frequency_label = Plan::EMAIL_FREQUENCY_LABELS[plan.email_report_frequency] || plan.email_report_frequency
+    @frequency_label = Plan::EMAIL_FREQUENCY_LABELS[@report_frequency] || @report_frequency
 
     # ── Meilleur repas (score santé le plus élevé) ────────────────────────
     @best_meal = @period_meals
@@ -406,14 +428,14 @@ class ReportMailer < ApplicationMailer
     mail(
       to:      to_address,
       from:    sender,
-      subject: "#{subject_prefix}#{subject_for(plan, @t)} — #{@period_label}"
+      subject: "#{subject_prefix}#{subject_for(@t)} — #{@period_label}"
     )
   end
 
   private
 
-  def period_start_for(plan)
-    case plan.email_report_frequency
+  def period_start_for
+    case @report_frequency
     when 'daily'   then 1.day.ago.beginning_of_day
     when 'weekly'  then 1.week.ago.beginning_of_day
     when 'monthly' then 1.month.ago.beginning_of_day
@@ -421,8 +443,8 @@ class ReportMailer < ApplicationMailer
     end
   end
 
-  def period_days(plan)
-    case plan.email_report_frequency
+  def period_days
+    case @report_frequency
     when 'daily'   then 1
     when 'weekly'  then 7
     when 'monthly' then 30
@@ -430,8 +452,8 @@ class ReportMailer < ApplicationMailer
     end
   end
 
-  def period_label(plan)
-    case plan.email_report_frequency
+  def period_label
+    case @report_frequency
     when 'daily'   then Date.yesterday.strftime("%-d %B %Y")
     when 'weekly'  then "#{1.week.ago.strftime("%-d %b")} – #{Date.current.strftime("%-d %b %Y")}"
     when 'monthly' then 1.month.ago.strftime("%B %Y").capitalize
@@ -439,8 +461,8 @@ class ReportMailer < ApplicationMailer
     end
   end
 
-  def subject_for(plan, t = REPORT_T["fr"])
-    case plan.email_report_frequency
+  def subject_for(t = REPORT_T["fr"])
+    case @report_frequency
     when 'daily'   then t[:subject_daily]
     when 'weekly'  then t[:subject_weekly]
     when 'monthly' then t[:subject_monthly]
