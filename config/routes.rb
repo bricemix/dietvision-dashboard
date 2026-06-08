@@ -41,6 +41,9 @@ Rails.application.routes.draw do
       get    "payments/webhook-status",         to: "payments#webhook_status"
       get    "payments/status/:transaction_id", to: "payments#status", as: :payment_status
       post   "payments/webhook",               to: "payments#webhook", as: :payments_webhook
+      # Notifications push (tokens FCM)
+      post   "device_tokens",  to: "device_tokens#create"
+      delete "device_tokens",  to: "device_tokens#destroy"
       get    "payments",                       to: "payments#index"
 
       # Profil
@@ -57,6 +60,8 @@ Rails.application.routes.draw do
       get    "user/body_entries",  to: "profile#body_entries_show"
       put    "user/body_entries",  to: "profile#body_entries_update"
       get    "user/meals",         to: "profile#meals_show"
+      get    "user/missions",      to: "profile#missions_show"
+      put    "user/missions",      to: "profile#missions_update"
       put    "user/meals",         to: "profile#meals_update"
 
       # Health check
@@ -81,12 +86,15 @@ Rails.application.routes.draw do
         post   :activate
         post   :extend_subscription
         post   :gift_access
+        post   :toggle_email_verification
         delete :destroy
         get    :data           # Voir toutes les données de l'utilisateur
         delete :clear_data     # Supprimer un type de données
       end
       collection do
         delete :destroy_all
+        get    :stripe_verification        # Cross-check DB ↔ Stripe
+        post   :stripe_verification_live   # Vérification live via Stripe API
       end
     end
 
@@ -110,7 +118,10 @@ Rails.application.routes.draw do
 
     # Codes promo
     resources :promo_codes do
-      member     { post :disable }
+      member do
+        post :disable
+        post :sync_stripe
+      end
       collection { post :bulk_generate }
     end
 
@@ -144,6 +155,9 @@ Rails.application.routes.draw do
       member { post :activate }
     end
   end
+
+  # Suppression de compte (RGPD — page web publique)
+  get  "delete-account", to: "pages#delete_account", as: :delete_account
 
   # Pages de retour Stripe Checkout (success / cancel)
   get  'payment/success', to: 'payment_pages#success', as: :payment_success

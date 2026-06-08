@@ -10,21 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_28_000001) do
-  create_table "admin_logs", force: :cascade do |t|
-    t.integer "admin_user_id"
-    t.string "action", null: false
-    t.string "resource_type"
-    t.integer "resource_id"
-    t.text "details_json"
-    t.string "ip_address"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["admin_user_id"], name: "index_admin_logs_on_admin_user_id"
-    t.index ["created_at"], name: "index_admin_logs_on_created_at"
-    t.index ["resource_type", "resource_id"], name: "index_admin_logs_on_resource_type_and_resource_id"
-  end
-
+ActiveRecord::Schema[8.0].define(version: 2026_04_25_000006) do
   create_table "admin_users", force: :cascade do |t|
     t.string "name", null: false
     t.string "email", null: false
@@ -80,43 +66,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_000001) do
     t.index ["user_id"], name: "index_payments_on_user_id"
   end
 
-  create_table "plans", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "slug", null: false
-    t.text "description"
-    t.integer "price_ariary", default: 0, null: false
-    t.string "billing_frequency", default: "monthly", null: false
-    t.text "features_json", default: "[]"
-    t.text "operators_json", default: "[]"
-    t.string "badge"
-    t.string "status", default: "draft"
-    t.integer "position", default: 0
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "stripe_price_id"
-    t.integer "price_usd_cents", default: 0, null: false
-    t.text "prices_json", default: "{}"
-    t.index ["slug"], name: "index_plans_on_slug", unique: true
-    t.index ["status"], name: "index_plans_on_status"
-  end
-
-  create_table "promo_codes", force: :cascade do |t|
-    t.string "code", null: false
-    t.string "discount_type", default: "percent", null: false
-    t.decimal "discount_value", precision: 10, scale: 2, null: false
-    t.text "applicable_plans_json", default: "[]"
-    t.datetime "starts_at"
-    t.datetime "expires_at"
-    t.integer "max_uses_total"
-    t.integer "max_uses_per_user", default: 1
-    t.integer "uses_count", default: 0
-    t.string "status", default: "active"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["code"], name: "index_promo_codes_on_code", unique: true
-    t.index ["status"], name: "index_promo_codes_on_status"
-  end
-
   create_table "subscriptions", force: :cascade do |t|
     t.integer "user_id", null: false
     t.string "plan", null: false
@@ -127,10 +76,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_000001) do
     t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "stripe_subscription_id"
-    t.string "stripe_payment_intent_id"
-    t.index ["stripe_payment_intent_id"], name: "index_subscriptions_on_stripe_payment_intent_id", unique: true, where: "stripe_payment_intent_id IS NOT NULL"
-    t.index ["stripe_subscription_id"], name: "index_subscriptions_on_stripe_subscription_id", unique: true, where: "stripe_subscription_id IS NOT NULL"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
 
@@ -146,15 +91,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_28_000001) do
     t.string "device_token"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "trial_ends_at"
-    t.boolean "had_trial", default: false, null: false
-    t.string "stripe_customer_id"
-    t.text "fitai_profile"
-    t.text "planning_data"
-    t.text "body_entries_data"
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["stripe_customer_id"], name: "index_users_on_stripe_customer_id", unique: true, where: "stripe_customer_id IS NOT NULL"
-    t.index ["trial_ends_at"], name: "index_users_on_trial_ends_at"
   end
 
   add_foreign_key "api_usages", "users"
