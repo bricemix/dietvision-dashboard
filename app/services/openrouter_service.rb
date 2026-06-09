@@ -7,7 +7,52 @@ class OpenrouterService
   end
 
   # Analyse une image alimentaire (base64 JPEG)
-  def analyze_food(base64_image, model: nil, locale: "fr")
+  # Text-only food analysis (no image)
+  def analyze_food_text(description, meal_type: nil, model: nil, locale: "fr")
+    model ||= AppConfig.vision_model
+    start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    context = description.strip
+    context += "
+Type de repas / Meal type: #{meal_type}" if meal_type.present?
+
+    payload = {
+      model: model,
+      max_tokens: 800,
+      messages: [
+        {
+          role: "user",
+          content: food_analysis_prompt(locale) + "
+
+Description du repas: #{context}"
+        }
+      ]
+    }
+
+    response   = post("chat/completions", payload)
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
+    data       = parse_response(response)
+
+    if response.success? && !data["error"]
+      text  = data.dig("choices", 0, "message", "content")
+      usage = data["usage"] || {}
+      record_usage(endpoint: "analyze_food", model: model,
+                   input_tokens: usage["prompt_tokens"].to_i,
+                   output_tokens: usage["completion_tokens"].to_i,
+                   duration_ms: duration_ms, status: "success")
+      parse_json_response(text)
+    else
+      err = data["error"]
+      msg = err.is_a?(Hash) ? err["message"].to_s : err.to_s
+      msg = "Analyse échouée (#{response.status})" if msg.blank?
+      record_usage(endpoint: "analyze_food", model: model, status: "error",
+                   duration_ms: duration_ms, error_message: msg)
+      { error: msg }
+    end
+  rescue => e
+    { error: e.message }
+  end
+
+  def analyze_food(base64_image, model: nil, locale: "fr", description: nil)
     model ||= AppConfig.vision_model
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
@@ -24,7 +69,8 @@ class OpenrouterService
             },
             {
               type: "text",
-              text: food_analysis_prompt(locale)
+              text: [food_analysis_prompt(locale), description.presence && "Note: #{description}"].compact.join("
+")
             }
           ]
         }
@@ -117,7 +163,7 @@ class OpenrouterService
     # Pas de system_prompt coach ici — le prompt utilisateur contient toutes les instructions
     payload = {
       model:      model,
-      max_tokens: max_tokens || 1200,
+      max_tokens: max_tokens || 1800,
       messages:   messages
     }
 
@@ -150,6 +196,40 @@ class OpenrouterService
                  error_message: "[#{e.class}] #{e.message}")
     { error: e.message }
   end
+
+# Traduit une notification push (titre + corps) dans plusieurs langues via l'IA.
+# Retourne { "fr" => {"title"=>..,"body"=>..}, "en" => {...}, ... }
+def translate_push(title:, body:, langs:, model: nil)
+  model ||= AppConfig.default_model
+  langs = Array(langs).map { |l| l.to_s == "us" ? "en" : l.to_s }
+                      .select { |l| %w[fr en de es pt].include?(l) }.uniq
+  langs = %w[en] if langs.empty?
+
+  sys = "You translate short mobile push notifications. Keep them concise and punchy, " \
+        "preserve emojis, never add extra text."
+  usr = "Translate this push notification into these locales: #{langs.join(', ')}.\n" \
+        "Return ONLY valid JSON, one object per locale:\n" \
+        "{\"fr\":{\"title\":\"...\",\"body\":\"...\"}}\n" \
+        "TITLE: #{title}\nBODY: #{body}"
+
+  payload = {
+    model:       model,
+    max_tokens:  800,
+    temperature: 0.2,
+    messages:    [{ role: "system", content: sys }, { role: "user", content: usr }]
+  }
+  response = post("chat/completions", payload)
+  data = parse_response(response)
+  return {} unless response.success? && !data["error"]
+
+  text = data.dig("choices", 0, "message", "content").to_s
+  s = text.index("{"); e = text.rindex("}")
+  return {} unless s && e && e > s
+  JSON.parse(text[s..e])
+rescue => ex
+  Rails.logger.error("[translate_push] #{ex.class}: #{ex.message}")
+  {}
+end
 
   private
 
@@ -204,6 +284,7 @@ class OpenrouterService
   def estimate_cost(model, input_tokens, output_tokens)
     # Coûts approximatifs en USD pour 1M tokens
     rates = {
+      "google/gemini-2.5-flash"     => { input: 0.30,  output: 2.50 },
       "google/gemini-2.0-flash-001" => { input: 0.075, output: 0.30 },
       "openai/gpt-4o-mini"          => { input: 0.15,  output: 0.60 },
       "openai/gpt-4o"               => { input: 2.50,  output: 10.0 }
