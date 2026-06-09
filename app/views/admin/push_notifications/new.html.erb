@@ -27,6 +27,42 @@
     </div>
   <% end %>
 
+  <!-- Mes modèles enregistrés (hors formulaire d'envoi) -->
+  <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-4">
+    <div class="text-sm font-medium text-gray-300 mb-3">Mes modèles enregistrés</div>
+    <% if @saved.any? %>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <% @saved.each do |tpl| %>
+          <div class="flex items-center bg-gray-950 border border-gray-700 rounded-lg overflow-hidden">
+            <button type="button" data-saved-tpl
+              data-title="<%= tpl.title %>" data-body="<%= tpl.body %>"
+              class="px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-800 transition-colors"><%= tpl.name %></button>
+            <%= button_to "✕", admin_push_destroy_template_path(tpl), method: :delete,
+                  form: { onsubmit: "return confirm('Supprimer ce modèle ?');" },
+                  class: "px-2.5 py-1.5 text-red-400 hover:bg-red-950/50 border-l border-gray-700 text-xs" %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-xs text-gray-500 mb-4">Aucun modèle enregistré. Compose un message ci-dessous puis « Enregistrer comme modèle ».</p>
+    <% end %>
+
+    <%= form_with url: admin_push_save_template_path, method: :post, local: true, id: "save-tpl-form",
+          class: "flex flex-col sm:flex-row gap-2 sm:items-end" do %>
+      <div class="flex-1">
+        <label class="block text-xs text-gray-400 mb-1">Enregistrer le message courant comme modèle</label>
+        <input type="text" name="name" placeholder="Nom du modèle (ex : Promo annuelle)" maxlength="60"
+          class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-lime-500 focus:outline-none">
+      </div>
+      <input type="hidden" name="title" id="save-tpl-title">
+      <input type="hidden" name="body"  id="save-tpl-body">
+      <button type="submit"
+        class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+        💾 Enregistrer comme modèle
+      </button>
+    <% end %>
+  </div>
+
   <!-- Formulaire d'envoi -->
   <%= form_with url: admin_push_notifications_path, method: :post, local: true,
         class: "bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5" do |f| %>
@@ -113,6 +149,27 @@
     var bo = document.getElementById('push-body');
     if (ti) ti.value = t.title;
     if (bo) bo.value = t.body;
+  });
+
+  // Charger un modèle enregistré dans le formulaire
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-saved-tpl]') : null;
+    if (!b) return;
+    var ti = document.getElementById('push-title');
+    var bo = document.getElementById('push-body');
+    if (ti) ti.value = b.getAttribute('data-title') || '';
+    if (bo) bo.value = b.getAttribute('data-body') || '';
+  });
+
+  // Au moment d'enregistrer un modèle, copier le titre/message courant
+  document.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'save-tpl-form') return;
+    var ti = document.getElementById('push-title');
+    var bo = document.getElementById('push-body');
+    var st = document.getElementById('save-tpl-title');
+    var sb = document.getElementById('save-tpl-body');
+    if (st) st.value = ti ? ti.value : '';
+    if (sb) sb.value = bo ? bo.value : '';
   });
 })();
 </script>

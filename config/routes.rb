@@ -82,6 +82,8 @@ Rails.application.routes.draw do
     # Notifications push
     get  "push", to: "push_notifications#new",    as: :push_notifications
     post "push", to: "push_notifications#create"
+    post   "push/templates",     to: "push_notifications#save_template",   as: :push_save_template
+    delete "push/templates/:id", to: "push_notifications#destroy_template", as: :push_destroy_template
 
     # Utilisateurs
     resources :users, only: %i[index show update new create] do

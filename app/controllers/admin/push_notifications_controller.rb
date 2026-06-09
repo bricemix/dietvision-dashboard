@@ -6,6 +6,27 @@ module Admin
       @total   = DeviceToken.count
       @by_plan = DeviceToken.joins(:user).group("users.plan").count
       @by_plat = DeviceToken.group(:platform).count
+      @saved   = SavedPushTemplate.order(created_at: :desc)
+    end
+
+    # Enregistre le message courant comme modèle réutilisable.
+    def save_template
+      name  = params[:name].to_s.strip
+      title = params[:title].to_s.strip
+      body  = params[:body].to_s.strip
+      if name.blank? || title.blank? || body.blank?
+        return redirect_to admin_push_notifications_path, alert: "Nom, titre et message requis pour enregistrer un modèle."
+      end
+      SavedPushTemplate.create!(name: name, title: title, body: body)
+      redirect_to admin_push_notifications_path, notice: "Modèle « #{name} » enregistré."
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to admin_push_notifications_path, alert: "Modèle invalide : #{e.message}"
+    end
+
+    # Supprime un modèle enregistré.
+    def destroy_template
+      SavedPushTemplate.find_by(id: params[:id])&.destroy
+      redirect_to admin_push_notifications_path, notice: "Modèle supprimé."
     end
 
     def create
