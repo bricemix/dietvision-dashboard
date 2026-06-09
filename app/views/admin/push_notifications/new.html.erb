@@ -1,0 +1,71 @@
+<% content_for :title, "Notifications push" %>
+
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-white">Notifications push</h1>
+    <p class="text-gray-400 text-sm mt-1">Composer et envoyer une notification aux appareils enregistrés (FCM).</p>
+  </div>
+
+  <!-- Stats appareils -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div class="text-xs text-gray-500">Appareils total</div>
+      <div class="text-2xl font-bold text-white"><%= @total %></div>
+    </div>
+    <% %w[pro premium vip].each do |p| %>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div class="text-xs text-gray-500"><%= p.upcase %></div>
+        <div class="text-2xl font-bold text-white"><%= @by_plan[p].to_i %></div>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @total.zero? %>
+    <div class="bg-amber-950/40 border border-amber-900/50 text-amber-300 rounded-xl p-4 mb-6 text-sm">
+      Aucun appareil enregistré pour l'instant. Les tokens apparaîtront dès que des utilisateurs
+      ouvriront l'app (build avec FCM) et accepteront les notifications.
+    </div>
+  <% end %>
+
+  <!-- Formulaire d'envoi -->
+  <%= form_with url: admin_push_notifications_path, method: :post, local: true,
+        class: "bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5" do |f| %>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1.5">Cible</label>
+      <select name="target"
+        class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:border-lime-500 focus:outline-none">
+        <option value="all">Tous les appareils (<%= @total %>)</option>
+        <option value="plan:pro">Plan Pro (<%= @by_plan["pro"].to_i %>)</option>
+        <option value="plan:premium">Plan Premium (<%= @by_plan["premium"].to_i %>)</option>
+        <option value="plan:vip">Plan VIP (<%= @by_plan["vip"].to_i %>)</option>
+        <option value="plan:starter">Plan Starter (<%= @by_plan["starter"].to_i %>)</option>
+        <option value="plan:free">Plan Free (<%= @by_plan["free"].to_i %>)</option>
+        <option value="inactive7">Inactifs depuis 7 jours</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1.5">Titre</label>
+      <input type="text" name="title" maxlength="60" required
+        placeholder="Ex : Ton bilan hebdo est prêt 🎉"
+        class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:border-lime-500 focus:outline-none">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1.5">Message</label>
+      <textarea name="body" rows="3" maxlength="180" required
+        placeholder="Ex : Découvre tes progrès de la semaine dans l'app."
+        class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:border-lime-500 focus:outline-none"></textarea>
+    </div>
+
+    <div class="flex items-center justify-between pt-2">
+      <p class="text-xs text-gray-500">L'envoi est immédiat et irréversible.</p>
+      <button type="submit"
+        onclick="return confirm('Envoyer cette notification maintenant ?');"
+        class="bg-lime-500 hover:bg-lime-400 text-gray-950 font-semibold px-5 py-2.5 rounded-lg transition-colors">
+        Envoyer la notification
+      </button>
+    </div>
+  <% end %>
+</div>

@@ -47,3 +47,6 @@ id_ed25519
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+
+# Firebase FCM service account key (jamais commit)
+config/fcm-service-account.json

@@ -79,6 +79,10 @@ Rails.application.routes.draw do
     # Dashboard
     root to: "dashboard#index", as: :dashboard
 
+    # Notifications push
+    get  "push", to: "push_notifications#new",    as: :push_notifications
+    post "push", to: "push_notifications#create"
+
     # Utilisateurs
     resources :users, only: %i[index show update new create] do
       member do
