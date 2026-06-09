@@ -69,7 +69,13 @@ class FcmPushService
     end
   end
 
+  # Mémoïsé pour toute la durée de vie de l'instance (token valide 1h) →
+  # permet d'envoyer à des milliers d'utilisateurs sans ré-authentifier.
   def access_token
+    @access_token ||= fetch_access_token
+  end
+
+  def fetch_access_token
     now = Time.now.to_i
     assertion = JWT.encode(
       { iss: @creds["client_email"], scope: SCOPE, aud: TOKEN_URI, iat: now, exp: now + 3600 },
