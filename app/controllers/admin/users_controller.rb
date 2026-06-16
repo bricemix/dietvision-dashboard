@@ -247,6 +247,13 @@ module Admin
     # Vérification live via Stripe API (appel réseau — peut être lent)
     def stripe_verification_live
       @issues      = _compute_db_issues
+      @summary     = {
+        total_issues: @issues.values.sum(&:size),
+        stripe_users: User.where.not(stripe_customer_id: nil).count,
+        active_stripe_subs: Subscription.where.not(stripe_subscription_id: nil)
+                                        .where(status: "active").count,
+        total_payments_stripe: Payment.where(provider: "stripe", status: "success").count,
+      }
       @live_issues = []
 
       begin
