@@ -16,7 +16,7 @@ gem "bcrypt", "~> 3.1.7"
 gem "jwt", "~> 2.9"
 
 # HTTP client (OpenRouter + Mobile Money)
-gem "faraday", "~> 2.12"
+gem "faraday", "~> 2.14"
 gem "faraday-retry"
 
 # Paiements internationaux
