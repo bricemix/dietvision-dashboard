@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_many :subscriptions, dependent: :destroy
   has_many :payments,      dependent: :destroy
   has_many :api_usages,    dependent: :destroy
+  has_many :chat_messages, dependent: :destroy
+  has_many :promo_code_redemptions, dependent: :destroy
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -38,9 +40,17 @@ class User < ApplicationRecord
 
   # ── Subscription helpers ──────────────────────────────────────
 
+  def vip?
+    plan.to_s.match?(/\Avip/i) && subscription_expires_at&.future?
+  end
+
   def premium?
     # Accepte "premium", "premium_12m", "premium-annual", etc.
     plan.to_s.match?(/\Apremium/i) && subscription_expires_at&.future?
+  end
+
+  def pro?
+    plan.to_s.match?(/\Apro/i) && subscription_expires_at&.future?
   end
 
   def in_trial?

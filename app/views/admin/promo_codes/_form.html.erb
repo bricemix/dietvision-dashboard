@@ -86,6 +86,92 @@
       </div>
     </div>
 
+    <%# Notifications email ── résumé quotidien d'utilisation %>
+    <div>
+      <%= f.label :notification_emails, "Emails de notification (résumé quotidien d'utilisation)", class: "block text-xs font-medium text-gray-400 mb-1" %>
+      <%= f.text_area :notification_emails, rows: 2,
+            value: promo_code.notification_emails.join(", "),
+            placeholder: "marketing@diet-vision.com, brice@diet-vision.com",
+            class: "w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-500" %>
+      <p class="text-[11px] text-gray-600 mt-1">Séparez plusieurs adresses par une virgule. Un email récapitulatif est envoyé chaque jour tant que ce code est utilisé.</p>
+
+      <% unless promo_code.new_record? %>
+        <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-700 mt-3" style="background:#0d1117">
+          <div class="flex-1">
+            <div class="text-xs font-semibold text-white">Tester l'envoi</div>
+            <div class="text-[11px] text-gray-500 mt-0.5">Envoie immédiatement le résumé à une adresse de votre choix</div>
+          </div>
+          <button type="button" onclick="openPromoReportTestModal()"
+                  class="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold border transition-colors cursor-pointer"
+                  style="background:rgba(200,255,0,0.1);color:#C8FF00;border-color:rgba(200,255,0,0.3)">
+            📤 Envoyer un test
+          </button>
+        </div>
+
+        <%# Modal email destinataire %>
+        <div id="promo-report-test-modal"
+             style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
+          <div style="background:#111827;border:1px solid #374151;border-radius:16px;padding:28px;width:100%;max-width:440px;margin:16px">
+            <div class="text-sm font-bold text-white mb-1">📤 Envoyer un résumé test</div>
+            <div class="text-xs text-gray-500 mb-5">Envoie le résumé d'utilisation du code <span class="font-mono text-white"><%= promo_code.code %></span> avec les chiffres actuels.</div>
+
+            <label class="block text-xs text-gray-400 mb-1">Email destinataire <span class="text-red-400">*</span></label>
+            <input type="email" id="promo-report-test-email"
+                   value="<%= current_admin.email %>"
+                   placeholder="votre@email.com"
+                   class="w-full px-3 py-2.5 rounded-lg text-sm text-white mb-4"
+                   style="background:#1f2937;border:1px solid #374151;outline:none;box-sizing:border-box"
+                   onfocus="this.style.borderColor='#C8FF00'" onblur="this.style.borderColor='#374151'">
+
+            <div class="flex gap-3 justify-end">
+              <button type="button" onclick="closePromoReportTestModal()"
+                      class="px-4 py-2 text-xs text-gray-400 rounded-lg transition-colors cursor-pointer"
+                      style="background:#1f2937;border:1px solid #374151">
+                Annuler
+              </button>
+              <button type="button" onclick="submitPromoReportTest()"
+                      class="px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                      style="background:#C8FF00;color:#0f172a;border:none">
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          function openPromoReportTestModal() {
+            var modal = document.getElementById('promo-report-test-modal');
+            modal.style.display = 'flex';
+            setTimeout(function(){ document.getElementById('promo-report-test-email').focus(); }, 100);
+          }
+          function closePromoReportTestModal() {
+            document.getElementById('promo-report-test-modal').style.display = 'none';
+          }
+          function submitPromoReportTest() {
+            var email = document.getElementById('promo-report-test-email').value.trim();
+            if (!email) { alert('Veuillez entrer une adresse email.'); return; }
+            var f = document.createElement('form');
+            f.method = 'POST';
+            f.action = '<%= send_report_test_admin_promo_code_path(promo_code) %>';
+            var t = document.createElement('input');
+            t.type = 'hidden'; t.name = 'authenticity_token';
+            t.value = '<%= form_authenticity_token %>';
+            var e = document.createElement('input');
+            e.type = 'hidden'; e.name = 'test_email'; e.value = email;
+            f.appendChild(t); f.appendChild(e);
+            document.body.appendChild(f);
+            closePromoReportTestModal();
+            f.submit();
+          }
+          document.getElementById('promo-report-test-modal').addEventListener('click', function(ev) {
+            if (ev.target === this) closePromoReportTestModal();
+          });
+        </script>
+      <% else %>
+        <p class="text-[11px] text-gray-600 italic mt-2">💡 Enregistrez le code pour pouvoir envoyer un test.</p>
+      <% end %>
+    </div>
+
     <%# Statut %>
     <div>
       <%= f.label :status, "Statut", class: "block text-xs font-medium text-gray-400 mb-1" %>

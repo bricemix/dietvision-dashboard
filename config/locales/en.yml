@@ -1,31 +1,22 @@
-# Files in the config/locales directory are used for internationalization and
-# are automatically loaded by Rails. If you want to use locales other than
-# English, add the necessary files in this directory.
-#
-# To use the locales, use `I18n.t`:
-#
-#     I18n.t "hello"
-#
-# In views, this is aliased to just `t`:
-#
-#     <%= t("hello") %>
-#
-# To use a different locale, set it with `I18n.locale`:
-#
-#     I18n.locale = :es
-#
-# This would use the information in config/locales/es.yml.
-#
-# To learn more about the API, please read the Rails Internationalization guide
-# at https://guides.rubyonrails.org/i18n.html.
-#
-# Be aware that YAML interprets the following case-insensitive strings as
-# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
-# must be quoted to be interpreted as strings. For example:
-#
-#     en:
-#       "yes": yup
-#       enabled: "ON"
-
 en:
   hello: "Hello world"
+  user_mailer:
+    welcome:
+      subject: "Welcome to %{app} 🥗"
+      tagline: "Your AI-powered nutrition coach"
+      greeting: "Welcome, %{name} 👋"
+      intro: >
+        Your DietVision account has been created. You can now analyze your meals
+        and track your nutrition with the power of artificial intelligence.
+      features_title: "WHAT YOU CAN DO"
+      feature_scan_title: "Photo analysis"
+      feature_scan_body: "Take a photo of any meal — the AI identifies foods and calculates macronutrients in seconds."
+      feature_coach_title: "Personalized AI coach"
+      feature_coach_body: "Ask your nutrition questions to your virtual coach, available 24/7."
+      feature_stats_title: "Tracking & statistics"
+      feature_stats_body: "Visualize your progress, calories and macros day after day."
+      trial_badge: "⚡ %{days}-day trial — %{limit} analyses/day"
+      free_badge: "🆓 Free plan — %{limit} analyses/day"
+      cta: "Open the app"
+      support: "Any questions? Reply directly to this email or contact us at"
+      footer: "You received this email because you signed up on DietVision."

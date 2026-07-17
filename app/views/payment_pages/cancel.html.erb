@@ -1,42 +1,52 @@
 <!DOCTYPE html>
-<html lang="fr">
+<%
+  locale = params[:locale].to_s
+  locale = 'fr' unless %w[fr en de es pt].include?(locale)
+
+  translations = {
+    'fr' => {
+      lang:  'fr',
+      title: 'Paiement annul&eacute;',
+      desc:  'Vous avez annul&eacute; le paiement. Aucune somme n&rsquo;a &eacute;t&eacute; d&eacute;bit&eacute;e.',
+      note:  'Retournez dans l&rsquo;application DietVision pour r&eacute;essayer quand vous le souhaitez.'
+    },
+    'en' => {
+      lang:  'en',
+      title: 'Payment cancelled',
+      desc:  'You cancelled the payment. No charge has been made.',
+      note:  'Go back to the DietVision app and try again whenever you&rsquo;re ready.'
+    },
+    'de' => {
+      lang:  'de',
+      title: 'Zahlung abgebrochen',
+      desc:  'Sie haben die Zahlung abgebrochen. Es wurde kein Betrag abgebucht.',
+      note:  'Kehren Sie zur DietVision-App zur&uuml;ck und versuchen Sie es wann immer Sie m&ouml;chten erneut.'
+    },
+    'es' => {
+      lang:  'es',
+      title: 'Pago cancelado',
+      desc:  'Has cancelado el pago. No se ha realizado ning&uacute;n cargo.',
+      note:  'Vuelve a la aplicaci&oacute;n DietVision e int&eacute;ntalo de nuevo cuando quieras.'
+    },
+    'pt' => {
+      lang:  'pt',
+      title: 'Pagamento cancelado',
+      desc:  'Voc&ecirc; cancelou o pagamento. Nenhum valor foi cobrado.',
+      note:  'Volte ao aplicativo DietVision e tente novamente quando quiser.'
+    },
+  }
+  t = translations[locale]
+%>
+<html lang="<%= t[:lang] %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Paiement annulé — DietVision</title>
+  <title>DietVision &mdash; <%= t[:title] %></title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0A0A0F;
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .card {
-      background: #1A1A2E;
-      border: 1px solid #2A2A3E;
-      border-radius: 24px;
-      padding: 48px 32px;
-      max-width: 420px;
-      width: 100%;
-      text-align: center;
-    }
-    .icon {
-      width: 80px;
-      height: 80px;
-      background: rgba(255,90,90,0.10);
-      border: 1.5px solid rgba(255,90,90,0.3);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 24px;
-      font-size: 36px;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0A0A0F; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #1A1A2E; border: 1px solid #2A2A3E; border-radius: 24px; padding: 48px 32px; max-width: 420px; width: 100%; text-align: center; }
+    .icon { width: 80px; height: 80px; background: rgba(255,90,90,0.10); border: 1.5px solid rgba(255,90,90,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; }
     h1 { font-size: 24px; font-weight: 900; margin-bottom: 12px; }
     p { color: #94A3B8; font-size: 14px; line-height: 1.6; }
     .note { margin-top: 24px; font-size: 13px; color: #64748B; }
@@ -44,10 +54,10 @@
 </head>
 <body>
   <div class="card">
-    <div class="icon">↩️</div>
-    <h1>Paiement annulé</h1>
-    <p>Vous avez annulé le paiement. Aucune somme n'a été débitée.</p>
-    <p class="note">Retournez dans l'application DietVision pour réessayer quand vous le souhaitez.</p>
+    <div class="icon">&#8617;&#65039;</div>
+    <h1><%= t[:title] %></h1>
+    <p><%= t[:desc] %></p>
+    <p class="note"><%= t[:note] %></p>
   </div>
 </body>
 </html>

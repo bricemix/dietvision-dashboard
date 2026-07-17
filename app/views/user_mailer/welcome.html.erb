@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<%= I18n.locale %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenue sur DietVision</title>
+  <title><%= t("user_mailer.welcome.subject", app: "DietVision") %></title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background-color: #f4f4f8; font-family: 'Helvetica Neue', Arial, sans-serif; }
@@ -40,6 +40,7 @@
     .badge { display: inline-block; background: #f0f0f8; border: 1px solid #e0e0ee;
              color: #7070a0; font-size: 12px; font-weight: 600; padding: 6px 16px;
              border-radius: 100px; letter-spacing: 0.3px; }
+    .badge-trial { background: #fffff0; border-color: #e8e800; color: #808000; }
 
     /* Footer */
     .footer { background: #f8f8fc; padding: 24px 40px; border-top: 1px solid #eeeef4; text-align: center; }
@@ -58,70 +59,78 @@
       <div class="logo-text">
         <span class="logo-diet">Diet</span><span class="logo-vision">Vision</span>
       </div>
-      <div class="tagline">Votre coach nutrition alimenté par l'IA</div>
+      <div class="tagline"><%= t("user_mailer.welcome.tagline") %></div>
     </div>
 
     <!-- Body -->
     <div class="body">
-      <p class="greeting">Bienvenue, <%= @user.name %> 👋</p>
+      <p class="greeting"><%= t("user_mailer.welcome.greeting", name: @user.name) %></p>
 
-      <p class="text">
-        Votre compte DietVision a bien été créé. Vous pouvez dès maintenant
-        utiliser l'application pour analyser vos repas et suivre votre nutrition
-        grâce à l'intelligence artificielle.
-      </p>
+      <p class="text"><%= t("user_mailer.welcome.intro") %></p>
 
       <!-- Features -->
       <div class="features">
         <div class="feature">
           <span class="feature-icon">📸</span>
           <div class="feature-text">
-            <span class="feature-title">Analyse photo</span>
-            Prenez en photo n'importe quel repas — l'IA identifie les aliments
-            et calcule les macronutriments en quelques secondes.
+            <span class="feature-title"><%= t("user_mailer.welcome.feature_scan_title") %></span>
+            <%= t("user_mailer.welcome.feature_scan_body") %>
           </div>
         </div>
         <div class="feature">
           <span class="feature-icon">🤖</span>
           <div class="feature-text">
-            <span class="feature-title">Coach IA personnalisé</span>
-            Posez vos questions nutrition à votre coach virtuel, disponible 24h/24.
+            <span class="feature-title"><%= t("user_mailer.welcome.feature_coach_title") %></span>
+            <%= t("user_mailer.welcome.feature_coach_body") %>
           </div>
         </div>
         <div class="feature">
           <span class="feature-icon">📊</span>
           <div class="feature-text">
-            <span class="feature-title">Suivi & statistiques</span>
-            Visualisez votre progression, vos calories et vos macros jour après jour.
+            <span class="feature-title"><%= t("user_mailer.welcome.feature_stats_title") %></span>
+            <%= t("user_mailer.welcome.feature_stats_body") %>
           </div>
         </div>
       </div>
 
-      <!-- Plan -->
+      <!-- Plan badge -->
+      <% trial_days = AppConfig.trial_period_days %>
       <div class="plan-badge">
-        <span class="badge">
-          🆓 Plan gratuit — <%= AppConfig.free_daily_limit %> analyses par jour
-        </span>
+        <% if @user.in_trial? && trial_days > 0 %>
+          <span class="badge badge-trial">
+            <%= t("user_mailer.welcome.trial_badge",
+                  days:  trial_days,
+                  limit: AppConfig.trial_scan_daily_limit) %>
+          </span>
+        <% else %>
+          <span class="badge">
+            <%= t("user_mailer.welcome.free_badge", limit: AppConfig.free_scan_daily_limit) %>
+          </span>
+        <% end %>
       </div>
 
       <!-- CTA -->
       <div class="cta-wrap">
-        <a href="https://diet-vision.com" class="cta">Ouvrir l'application</a>
+        <a href="<%= AppConfig.get('email_app_url').presence || 'https://diet-vision.com' %>" class="cta">
+          <%= t("user_mailer.welcome.cta") %>
+        </a>
       </div>
 
       <div class="divider"></div>
 
+      <% support = AppConfig.get('support_email') %>
       <p class="text" style="font-size:13px; color:#7070a0; margin-top:20px; margin-bottom:0;">
-        Une question ? Répondez directement à cet email ou contactez-nous à
-        <a href="mailto:<%= AppConfig.get('support_email') %>" style="color:#7070a0;"><%= AppConfig.get('support_email') %></a>
+        <%= t("user_mailer.welcome.support") %>
+        <a href="mailto:<%= support %>" style="color:#7070a0;"><%= support %></a>
       </p>
     </div>
 
     <!-- Footer -->
     <div class="footer">
       <p class="footer-text">
-        Vous recevez cet email car vous vous êtes inscrit sur DietVision.<br>
-        &copy; <%= Date.current.year %> DietVision · <a href="https://diet-vision.com" class="footer-link">diet-vision.com</a>
+        <%= t("user_mailer.welcome.footer") %><br>
+        &copy; <%= Date.current.year %> DietVision &middot;
+        <a href="https://diet-vision.com" class="footer-link">diet-vision.com</a>
       </p>
     </div>
 

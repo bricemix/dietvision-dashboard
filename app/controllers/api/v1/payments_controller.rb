@@ -15,8 +15,11 @@ module Api
                         status: :unprocessable_entity
         end
 
+        # Locale : priorité au body params, fallback sur Accept-Language header
+        locale = resolve_locale(params[:locale])
+
         service = StripeService.new
-        result  = service.create_checkout_session(user: current_user, plan: plan)
+        result  = service.create_checkout_session(user: current_user, plan: plan, locale: locale)
 
         # Créer subscription + payment en attente
         amount_cents = plan.price_eur_cents
@@ -100,7 +103,9 @@ module Api
         stripe_session = Stripe::Checkout::Session.retrieve(
           { id: session_id, expand: ["subscription", "subscription.latest_invoice"] }
         )
-        paid = stripe_session.payment_status == "paid"
+        # "paid"               → paiement standard réussi
+        # "no_payment_required" → code promo 100% ou plan gratuit (montant = 0€)
+        paid = stripe_session.payment_status.in?(%w[paid no_payment_required])
 
         unless paid
           return render json: {
@@ -127,6 +132,21 @@ module Api
             stripe_subscription_id = stripe_session.subscription
             if stripe_subscription_id.present?
               stripe_sub = Stripe::Subscription.retrieve(stripe_subscription_id)
+
+              # SECURITE : n'activer que si la subscription Stripe est reellement active.
+              # Evite l'activation frauduleuse quand payment_status="paid" mais
+              # la subscription est encore incomplete (autorisation bancaire en attente).
+              unless stripe_sub.status == "active"
+                Rails.logger.warn("[Payments#verify] subscription #{stripe_subscription_id} status=#{stripe_sub.status} -> activation refusee")
+                return render json: {
+                  paid:             false,
+                  plan:             current_user.plan,
+                  webhook_received: false,
+                  invoice_sent:     false,
+                  email_sent:       false
+                }
+              end
+
               expires_at = Time.at(stripe_sub.current_period_end).utc
 
               subscription = payment&.subscription ||
@@ -192,6 +212,29 @@ module Api
         render json: { error: "Erreur serveur" }, status: :internal_server_error
       end
 
+      # POST /api/v1/payments/portal
+      # Crée une session Stripe Customer Portal et retourne l'URL.
+      # L'utilisateur peut y annuler, changer de carte, voir les factures.
+      def portal
+        unless current_user.stripe_customer_id.present?
+          return render json: { error: "Aucun abonnement Stripe associé à ce compte." },
+                        status: :unprocessable_entity
+        end
+
+        service  = StripeService.new
+        portal_url = service.create_portal_session(
+          customer_id: current_user.stripe_customer_id,
+          return_url:  "https://api.diet-vision.com/payment/portal-return"
+        )
+        render json: { portal_url: portal_url }, status: :ok
+
+      rescue Stripe::StripeError => e
+        render json: { error: e.message }, status: :unprocessable_entity
+      rescue => e
+        Rails.logger.error("Payments#portal error: #{e.message}")
+        render json: { error: "Erreur serveur" }, status: :internal_server_error
+      end
+
       # GET /api/v1/payments/webhook-status?session_id=cs_xxx
       # Permet au client de poller pour savoir si le webhook a été traité.
       # Retourne : { received, processed, plan, received_at }
@@ -238,11 +281,26 @@ module Api
 
       private
 
+      # Résout la locale depuis le body param ou l'en-tête Accept-Language.
+      # Retourne toujours une locale valide parmi : fr, en, de, es, pt.
+      def resolve_locale(param_locale)
+        locale = param_locale.to_s.downcase.strip
+        return locale if %w[fr en de es pt us].include?(locale)
+
+        # Fallback sur Accept-Language header (ex: "de-DE,de;q=0.9" → "de")
+        raw = request.env["HTTP_ACCEPT_LANGUAGE"].to_s.downcase
+        lang = raw.split(/[,;]/).first&.strip&.split("-")&.first || ""
+        return lang if %w[fr de es pt].include?(lang)
+        return "en" if lang == "en"
+
+        "fr"
+      end
+
       def user_json(user)
         # La période d'essai ne s'applique qu'au plan Starter.
         trial_eligible = user.plan.to_s.match?(/\A(free|starter)\z/i)
 
-        active = user.premium? ||
+        active = user.premium? || user.vip? ||
                  user.active_subscription.present? ||
                  (trial_eligible && user.in_trial?)
 
@@ -253,7 +311,7 @@ module Api
           plan:                    user.plan,
           subscription_plan:       user.plan,
           subscription_expires_at: user.subscription_expires_at,
-          premium:                 user.premium?,
+          premium:                 user.premium? || user.vip?,
           is_active:               active,
           trial_ends_at:           trial_eligible ? user.trial_ends_at : nil,
           in_trial:                trial_eligible && user.in_trial?,

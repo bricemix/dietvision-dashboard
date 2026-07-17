@@ -254,7 +254,41 @@ class StripeService
     # Stocker le stripe_subscription_id → indispensable pour les futurs webhooks
     subscription.update_columns(stripe_subscription_id: stripe_subscription_id) if stripe_subscription_id.present?
 
+    detect_and_record_promo_redemption(session, user)
+
     Rails.logger.info("Stripe checkout.completed : #{user.email} → sub #{stripe_subscription_id}")
+  end
+
+  # ── Détection & enregistrement d'un code promo utilisé ─────────────────────────
+  # Stripe applique le code côté hosted checkout (allow_promotion_codes: true) —
+  # on ne le sait qu'en relisant la session avec le détail des réductions.
+  # Idempotent via l'index unique sur stripe_session_id (webhooks Stripe peuvent être renvoyés).
+
+  def detect_and_record_promo_redemption(session, user)
+    return if session.id.blank?
+    return if PromoCodeRedemption.exists?(stripe_session_id: session.id)
+
+    full_session = Stripe::Checkout::Session.retrieve(
+      { id: session.id, expand: ["total_details.breakdown.discounts"] }, @opts
+    )
+    discounts = full_session.total_details&.breakdown&.discounts
+    return if discounts.blank?
+
+    promo_stripe_id = discounts.first&.discount&.promotion_code
+    return if promo_stripe_id.blank?
+
+    promo_code = PromoCode.find_by(stripe_promotion_code_id: promo_stripe_id)
+    return unless promo_code
+
+    payment = Payment.find_by(provider_ref: session.id)
+
+    PromoCodeRedemption.create!(
+      user: user, promo_code: promo_code, payment: payment, stripe_session_id: session.id
+    )
+    promo_code.increment_usage!
+    Rails.logger.info("Code promo utilisé : #{promo_code.code} par #{user.email}")
+  rescue => e
+    Rails.logger.error("detect_and_record_promo_redemption error: #{e.message}")
   end
 
   # ── invoice.paid ──────────────────────────────────────────────────────────────

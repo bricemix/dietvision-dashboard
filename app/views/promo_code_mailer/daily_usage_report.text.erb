@@ -1,0 +1,11 @@
+DietVision — Résumé quotidien code promo (<%= @date.strftime("%d/%m/%Y") %>)
+
+Code : <%= @promo_code.code %> (<%= @promo_code.discount_label %>, <%= @promo_code.effective_status %>)
+
+Aujourd'hui :
+- <%= @today_unique %> utilisateur(s) unique(s)
+- <%= @today_count %> utilisation(s)
+
+Depuis la création du code :
+- <%= @total_uses %> utilisation(s) au total
+- <%= @total_unique %> utilisateur(s) unique(s)

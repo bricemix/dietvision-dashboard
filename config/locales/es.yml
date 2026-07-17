@@ -1,0 +1,21 @@
+es:
+  user_mailer:
+    welcome:
+      subject: "Bienvenido a %{app} 🥗"
+      tagline: "Tu coach de nutrición potenciado por IA"
+      greeting: "Bienvenido, %{name} 👋"
+      intro: >
+        Tu cuenta de DietVision ha sido creada. Ya puedes analizar tus comidas
+        y hacer seguimiento de tu nutrición con el poder de la inteligencia artificial.
+      features_title: "LO QUE PUEDES HACER"
+      feature_scan_title: "Análisis de fotos"
+      feature_scan_body: "Fotografía cualquier comida — la IA identifica los alimentos y calcula los macronutrientes en segundos."
+      feature_coach_title: "Coach de IA personalizado"
+      feature_coach_body: "Haz tus preguntas de nutrición a tu coach virtual, disponible las 24 horas."
+      feature_stats_title: "Seguimiento y estadísticas"
+      feature_stats_body: "Visualiza tu progreso, calorías y macros día a día."
+      trial_badge: "⚡ Prueba de %{days} días — %{limit} análisis/día"
+      free_badge: "🆓 Plan gratuito — %{limit} análisis/día"
+      cta: "Abrir la aplicación"
+      support: "¿Alguna pregunta? Responde directamente a este correo o contáctanos en"
+      footer: "Recibes este correo porque te registraste en DietVision."

@@ -90,13 +90,13 @@ module Api
       # Body: { "email": "user@example.com", "token": "123456", "password": "NewPass1!" }
       def reset_password
         user = User.find_by(email: params[:email]&.downcase)
-        unless user
-          return render json: { error: "Utilisateur introuvable" }, status: :not_found
-        end
+        # Anti-énumération : message générique identique que l'email existe ou non.
+        invalid = { error: "Code invalide, expiré, ou mot de passe non conforme" }
+        return render json: invalid, status: :unprocessable_entity unless user
         if user.reset_password_with_token!(params[:token], params[:password])
           render json: { message: "Mot de passe réinitialisé avec succès" }, status: :ok
         else
-          render json: { error: "Code invalide, expiré, ou mot de passe non conforme" }, status: :unprocessable_entity
+          render json: invalid, status: :unprocessable_entity
         end
       end
 
@@ -131,7 +131,7 @@ module Api
 
       def register_params
         source = params[:user].present? ? params.require(:user) : params
-        source.permit(:name, :email, :password, :phone, :country)
+        source.permit(:name, :email, :password, :phone, :country, :locale)
       end
 
       def user_json(user)
@@ -140,7 +140,7 @@ module Api
         trial_eligible = user.plan.to_s.match?(/\A(free|starter)\z/i)
 
         # is_active : vrai si abonnement payant actif OU en période d'essai Starter
-        active = user.premium? ||
+        active = user.premium? || user.vip? ||
                  user.active_subscription.present? ||
                  (trial_eligible && user.in_trial?)
 
@@ -153,7 +153,7 @@ module Api
           plan:                    user.plan,
           subscription_plan:       user.plan,
           subscription_expires_at: user.subscription_expires_at,
-          premium:                 user.premium?,
+          premium:                 user.premium? || user.vip?,
           is_active:               active,
           trial_ends_at:           trial_eligible ? user.trial_ends_at : nil,
           in_trial:                trial_eligible && user.in_trial?,

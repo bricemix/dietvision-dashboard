@@ -1,11 +1,15 @@
 class UserMailer < ApplicationMailer
-  # E-mail de bienvenue envoyé après inscription
+  # E-mail de bienvenue envoyé après inscription (traduit selon user.locale)
   def welcome(user)
     @user = user
-    mail(
-      to:      "#{user.name} <#{user.email}>",
-      subject: "Bienvenue sur DietVision 🥗"
-    )
+    locale = user.locale.presence&.to_sym || :fr
+    locale = :fr unless %i[fr en de es].include?(locale)
+    I18n.with_locale(locale) do
+      mail(
+        to:      "#{user.name} <#{user.email}>",
+        subject: I18n.t("user_mailer.welcome.subject", app: "DietVision")
+      )
+    end
   end
 
   # Échec de paiement (renouvellement) — envoyé par invoice.payment_failed
@@ -37,13 +41,21 @@ class UserMailer < ApplicationMailer
     )
   end
 
-  # Confirmation d'activation Premium — envoyé par invoice.paid (optionnel)
-  def subscription_activated(user, expires_at)
+  # Confirmation d'activation abonnement — envoyé par invoice.paid
+  # plan_level : 'starter' | 'pro' | 'premium'
+  def subscription_activated(user, expires_at, plan_level: nil)
     @user       = user
     @expires_at = expires_at
+    @plan_level = (plan_level || user.plan || "premium").to_s.downcase
+    @plan_name  = case @plan_level
+                  when "premium" then "Premium"
+                  when "pro"     then "Pro"
+                  when "starter" then "Starter"
+                  else @plan_level.capitalize
+                  end
     mail(
       to:      "#{user.name} <#{user.email}>",
-      subject: "✅ Votre abonnement Premium est actif — DietVision"
+      subject: "✅ Votre abonnement #{@plan_name} est actif — DietVision"
     )
   end
 end

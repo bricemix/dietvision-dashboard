@@ -1,0 +1,21 @@
+de:
+  user_mailer:
+    welcome:
+      subject: "Willkommen bei %{app} 🥗"
+      tagline: "Dein KI-gestützter Ernährungscoach"
+      greeting: "Willkommen, %{name} 👋"
+      intro: >
+        Dein DietVision-Konto wurde erfolgreich erstellt. Du kannst jetzt
+        deine Mahlzeiten analysieren und deine Ernährung mit künstlicher Intelligenz verfolgen.
+      features_title: "WAS DU TUN KANNST"
+      feature_scan_title: "Fotoanalyse"
+      feature_scan_body: "Fotografiere eine beliebige Mahlzeit — die KI erkennt Lebensmittel und berechnet Makronährstoffe in Sekunden."
+      feature_coach_title: "Persönlicher KI-Coach"
+      feature_coach_body: "Stelle deinem virtuellen Coach Ernährungsfragen, rund um die Uhr verfügbar."
+      feature_stats_title: "Tracking & Statistiken"
+      feature_stats_body: "Visualisiere deinen Fortschritt, Kalorien und Makros Tag für Tag."
+      trial_badge: "⚡ %{days}-Tage-Testversion — %{limit} Analysen/Tag"
+      free_badge: "🆓 Kostenloser Plan — %{limit} Analysen/Tag"
+      cta: "App öffnen"
+      support: "Fragen? Antworte direkt auf diese E-Mail oder kontaktiere uns unter"
+      footer: "Du erhältst diese E-Mail, weil du dich bei DietVision registriert hast."

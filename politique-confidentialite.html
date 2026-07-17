@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Politique de confidentialité — DietVision</title>
+  <meta name="description" content="Politique de confidentialité de DietVision. Découvrez comment nous collectons, utilisons et protégeons vos données personnelles conformément au RGPD.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://diet-vision.com/politique-confidentialite">
+  <link rel="alternate" hreflang="fr" href="https://diet-vision.com/politique-confidentialite">
+  <link rel="alternate" hreflang="en" href="https://diet-vision.com/privacy-policy">
+  <link rel="alternate" hreflang="de" href="https://diet-vision.com/datenschutz">
+  <link rel="alternate" hreflang="es" href="https://diet-vision.com/politica-de-privacidad">
+  <link rel="alternate" hreflang="pt" href="https://diet-vision.com/politica-de-privacidade">
+  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
+  <meta name="theme-color" content="#C8FF00">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #111;
+      border-bottom: 1px solid #1e1e1e;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-decoration: none;
+    }
+    .logo span:first-child { color: #fff; }
+    .logo span:last-child  { color: #C8FF00; }
+
+    .back-link {
+      font-size: 13px;
+      color: #888;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #C8FF00; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #111 0%, #161616 100%);
+      border-bottom: 1px solid #1e1e1e;
+      padding: 64px 24px 48px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(200,255,0,0.08);
+      border: 1px solid rgba(200,255,0,0.2);
+      border-radius: 100px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #C8FF00;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .hero-meta {
+      font-size: 14px;
+      color: #666;
+    }
+    .hero-meta strong { color: #999; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 52px;
+    }
+    .toc h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #C8FF00;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 14px;
+    }
+    .toc ol {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .toc a {
+      color: #aaa;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .toc a:hover { color: #C8FF00; }
+
+    /* ── Sections ── */
+    section {
+      margin-bottom: 52px;
+      scroll-margin-top: 80px;
+    }
+    section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e1e1e;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    section h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: rgba(200,255,0,0.1);
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 800;
+      color: #C8FF00;
+      flex-shrink: 0;
+    }
+    section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ddd;
+      margin: 22px 0 10px;
+    }
+    section p {
+      color: #aaa;
+      margin-bottom: 12px;
+    }
+    section ul, section ol {
+      padding-left: 20px;
+      color: #aaa;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    section li { line-height: 1.6; }
+
+    /* ── Cards ── */
+    .card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin: 16px 0;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #C8FF00;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Highlight box ── */
+    .highlight {
+      background: rgba(200,255,0,0.05);
+      border-left: 3px solid #C8FF00;
+      border-radius: 0 10px 10px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      color: #bbb;
+      font-size: 14px;
+    }
+
+    /* ── Table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .data-table th {
+      background: #161616;
+      color: #C8FF00;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #222;
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #1a1a1a;
+      color: #aaa;
+      vertical-align: top;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #111; }
+
+    /* ── Contact ── */
+    .contact-card {
+      background: linear-gradient(135deg, #111 0%, #141414 100%);
+      border: 1px solid #252525;
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+    }
+    .contact-card p { color: #888; font-size: 14px; margin-bottom: 16px; }
+    .contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #C8FF00;
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 100px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .contact-link:hover { background: #d4ff33; transform: translateY(-1px); }
+
+    /* ── Footer ── */
+    footer {
+      background: #0a0a0a;
+      border-top: 1px solid #1a1a1a;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    footer p { color: #444; font-size: 13px; line-height: 1.6; }
+    footer a { color: #666; text-decoration: none; }
+    footer a:hover { color: #C8FF00; }
+
+    /* ── Lang bar ── */
+    .lang-bar { background: #111; border-bottom: 1px solid #1a1a1a; padding: 10px 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .lang-bar a { font-size: 12px; color: #666; text-decoration: none; padding: 4px 10px; border-radius: 100px; border: 1px solid #222; transition: all 0.2s; }
+    .lang-bar a:hover { color: #C8FF00; border-color: #C8FF00; }
+    .lang-bar a.active { color: #000; background: #C8FF00; border-color: #C8FF00; font-weight: 700; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .data-table { font-size: 13px; }
+      .data-table th, .data-table td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <a href="https://diet-vision.com" class="logo">
+      <span>Diet</span><span>Vision</span>
+    </a>
+    <a href="https://diet-vision.com" class="back-link">
+      ← Retour au site
+    </a>
+  </header>
+
+  <div class="lang-bar">
+    <a href="/politique-confidentialite" class="active">🇫🇷 Français</a>
+    <a href="/privacy-policy">🇬🇧 English</a>
+    <a href="/datenschutz">🇩🇪 Deutsch</a>
+    <a href="/politica-de-privacidad">🇪🇸 Español</a>
+    <a href="/politica-de-privacidade">🇵🇹 Português</a>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">🔒 RGPD</div>
+    <h1>Politique de confidentialité</h1>
+    <p class="hero-meta">
+      <strong>Dernière mise à jour :</strong> 22 mai 2025 &nbsp;·&nbsp;
+      <strong>Version :</strong> 1.0
+    </p>
+  </div>
+
+  <!-- Content -->
+  <div class="container">
+
+    <!-- Intro -->
+    <div class="highlight">
+      Chez <strong>DietVision</strong>, la protection de vos données personnelles est une priorité. Cette politique explique quelles données nous collectons, pourquoi, et comment vous pouvez exercer vos droits conformément au <strong>Règlement Général sur la Protection des Données (RGPD)</strong>.
+    </div>
+
+    <!-- Table of contents -->
+    <nav class="toc">
+      <h2>Sommaire</h2>
+      <ol>
+        <li><a href="#responsable">Responsable du traitement</a></li>
+        <li><a href="#donnees">Données collectées</a></li>
+        <li><a href="#finalites">Finalités et bases légales</a></li>
+        <li><a href="#retention">Durée de conservation</a></li>
+        <li><a href="#partage">Partage des données</a></li>
+        <li><a href="#securite">Sécurité</a></li>
+        <li><a href="#droits">Vos droits</a></li>
+        <li><a href="#cookies">Cookies et traceurs</a></li>
+        <li><a href="#mineurs">Mineurs</a></li>
+        <li><a href="#contact">Nous contacter</a></li>
+      </ol>
+    </nav>
+
+    <!-- 1. Responsable -->
+    <section id="responsable">
+      <h2><span class="num">1</span> Responsable du traitement</h2>
+      <div class="card">
+        <div class="card-title">Identité</div>
+        <p><strong style="color:#ddd;">DietVision</strong><br>
+        Application mobile de coaching nutritionnel par intelligence artificielle<br>
+        Email : <a href="mailto:support@diet-vision.com" style="color:#C8FF00;">support@diet-vision.com</a><br>
+        Site web : <a href="https://diet-vision.com" style="color:#C8FF00;">https://diet-vision.com</a></p>
+      </div>
+      <p>Pour toute question relative à vos données personnelles, vous pouvez nous contacter à l'adresse ci-dessus.</p>
+    </section>
+
+    <!-- 2. Données collectées -->
+    <section id="donnees">
+      <h2><span class="num">2</span> Données collectées</h2>
+
+      <h3>2.1 Données fournies directement par l'utilisateur</h3>
+      <table class="data-table">
+        <thead>
+          <tr><th>Catégorie</th><th>Données</th><th>Obligatoire</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Compte</td><td>Nom, adresse e-mail, mot de passe (haché)</td><td>Oui</td></tr>
+          <tr><td>Profil nutritionnel</td><td>Âge, sexe, taille, poids, objectif (perte/prise de poids, maintien), régime alimentaire</td><td>Non</td></tr>
+          <tr><td>Mesures corporelles</td><td>Poids, IMC et autres mesures enregistrées manuellement</td><td>Non</td></tr>
+          <tr><td>Repas</td><td>Photos de repas, résultats d'analyse (calories, macronutriments, score santé)</td><td>Non</td></tr>
+          <tr><td>Messages coach</td><td>Conversations avec le coach IA</td><td>Non</td></tr>
+          <tr><td>Paiement</td><td>Informations de facturation (gérées par Stripe, non stockées chez nous)</td><td>Selon plan</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2.2 Données collectées automatiquement</h3>
+      <ul>
+        <li>Données d'utilisation de l'application (fonctionnalités utilisées, fréquence)</li>
+        <li>Identifiant d'appareil anonymisé</li>
+        <li>Langue de l'appareil</li>
+        <li>Journaux d'erreurs techniques (crashs)</li>
+      </ul>
+
+      <div class="highlight">
+        <strong>Important :</strong> Nous ne collectons jamais votre localisation GPS, vos contacts, ni l'accès à votre microphone. L'accès à la caméra/galerie est uniquement utilisé pour la photo des repas et n'est jamais stocké sur nos serveurs sans votre action explicite.
+      </div>
+    </section>
+
+    <!-- 3. Finalités -->
+    <section id="finalites">
+      <h2><span class="num">3</span> Finalités et bases légales</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>Finalité</th><th>Base légale (RGPD)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Création et gestion de votre compte</td>
+            <td>Exécution du contrat (Art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Analyse nutritionnelle par IA (photos de repas)</td>
+            <td>Exécution du contrat (Art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Coaching nutritionnel personnalisé</td>
+            <td>Exécution du contrat (Art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Envoi de rapports nutritionnels par e-mail</td>
+            <td>Exécution du contrat + consentement (Art. 6.1.a/b)</td>
+          </tr>
+          <tr>
+            <td>Gestion des paiements et abonnements</td>
+            <td>Exécution du contrat (Art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Amélioration de nos services</td>
+            <td>Intérêt légitime (Art. 6.1.f)</td>
+          </tr>
+          <tr>
+            <td>Conformité légale et fiscale</td>
+            <td>Obligation légale (Art. 6.1.c)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. Rétention -->
+    <section id="retention">
+      <h2><span class="num">4</span> Durée de conservation</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>Données</th><th>Durée de conservation</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Compte utilisateur actif</td><td>Pendant toute la durée d'utilisation du compte</td></tr>
+          <tr><td>Données nutritionnelles et repas</td><td>Pendant toute la durée d'utilisation du compte</td></tr>
+          <tr><td>Compte supprimé</td><td>30 jours après suppression (purge complète)</td></tr>
+          <tr><td>Données de facturation</td><td>10 ans (obligation comptable légale)</td></tr>
+          <tr><td>Journaux techniques</td><td>90 jours</td></tr>
+          <tr><td>Conversations coach IA</td><td>Durée du compte, supprimables à tout moment</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5. Partage -->
+    <section id="partage">
+      <h2><span class="num">5</span> Partage des données</h2>
+      <p>Nous ne vendons jamais vos données personnelles. Elles peuvent être partagées uniquement avec les sous-traitants suivants, dans le cadre strict de la fourniture du service :</p>
+
+      <div class="card">
+        <div class="card-title">🤖 OpenRouter / Google Gemini (IA)</div>
+        <p>OpenRouter est la passerelle API utilisée pour acheminer les requêtes d'analyse nutritionnelle (photos de repas) et de coaching vers des modèles d'intelligence artificielle tiers, notamment <strong style="color:#ddd;">Google Gemini</strong>. Les données transmises incluent le contenu des photos et des messages saisis dans l'application. OpenRouter et les fournisseurs de modèles s'engagent contractuellement à ne pas utiliser ces données à des fins d'entraînement sans consentement explicite.</p>
+        <p style="margin-top:8px;">
+          <a href="https://openrouter.ai/privacy" target="_blank" rel="noopener" style="color:#C8FF00;">Politique OpenRouter →</a>
+          &nbsp;·&nbsp;
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color:#C8FF00;">Politique Google →</a>
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💳 Stripe</div>
+        <p>Gestion des paiements et abonnements. Vos coordonnées bancaires sont directement gérées par Stripe et ne transitent jamais par nos serveurs. <a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener" style="color:#C8FF00;">Politique Stripe →</a></p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📧 Resend</div>
+        <p>Envoi des e-mails transactionnels (vérification, rapports nutritionnels, notifications). Seule votre adresse e-mail est transmise. <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener" style="color:#C8FF00;">Politique Resend →</a></p>
+      </div>
+
+      <p>Tous nos sous-traitants sont sélectionnés pour leur conformité RGPD et font l'objet de contrats de traitement des données.</p>
+    </section>
+
+    <!-- 6. Sécurité -->
+    <section id="securite">
+      <h2><span class="num">6</span> Sécurité</h2>
+      <p>Nous mettons en œuvre des mesures techniques et organisationnelles pour protéger vos données :</p>
+      <ul>
+        <li>Chiffrement des communications via HTTPS/TLS</li>
+        <li>Mots de passe hachés avec bcrypt (jamais stockés en clair)</li>
+        <li>Tokens d'authentification à durée limitée</li>
+        <li>Accès aux données restreint au personnel autorisé</li>
+        <li>Serveurs hébergés en Europe (Union Européenne)</li>
+        <li>Sauvegardes régulières et chiffrées</li>
+      </ul>
+      <div class="highlight">
+        En cas de violation de données susceptible d'affecter vos droits et libertés, nous nous engageons à vous notifier dans les 72 heures conformément à l'article 33 du RGPD.
+      </div>
+    </section>
+
+    <!-- 7. Droits -->
+    <section id="droits">
+      <h2><span class="num">7</span> Vos droits</h2>
+      <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+
+      <div class="card">
+        <div class="card-title">📋 Droit d'accès (Art. 15)</div>
+        <p>Obtenir une copie de toutes vos données personnelles que nous détenons.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">✏️ Droit de rectification (Art. 16)</div>
+        <p>Corriger des données inexactes ou incomplètes directement depuis l'application ou en nous contactant.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🗑️ Droit à l'effacement (Art. 17)</div>
+        <p>Supprimer votre compte et l'ensemble de vos données. Vous pouvez initier la suppression depuis l'application. La purge complète intervient dans les 30 jours.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">⏸️ Droit à la limitation (Art. 18)</div>
+        <p>Demander la limitation du traitement de vos données dans certaines circonstances.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📦 Droit à la portabilité (Art. 20)</div>
+        <p>Recevoir vos données dans un format structuré et lisible par machine (JSON).</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🚫 Droit d'opposition (Art. 21)</div>
+        <p>Vous opposer à certains traitements basés sur notre intérêt légitime.</p>
+      </div>
+
+      <p style="margin-top:20px;">Pour exercer vos droits, contactez-nous à <a href="mailto:support@diet-vision.com" style="color:#C8FF00;">support@diet-vision.com</a>. Nous répondrons dans un délai d'<strong style="color:#ddd;">un mois</strong>.</p>
+      <p>Si vous estimez que le traitement de vos données ne respecte pas le RGPD, vous pouvez introduire une réclamation auprès de la <strong style="color:#ddd;"><a href="https://www.cnil.fr" target="_blank" rel="noopener" style="color:#C8FF00;">CNIL</a></strong> (Commission Nationale de l'Informatique et des Libertés).</p>
+    </section>
+
+    <!-- 8. Cookies -->
+    <section id="cookies">
+      <h2><span class="num">8</span> Cookies et traceurs</h2>
+      <p>L'application mobile DietVision n'utilise <strong style="color:#ddd;">pas de cookies publicitaires</strong> ni de traceurs tiers à des fins de ciblage.</p>
+      <p>Le site web <a href="https://diet-vision.com" style="color:#C8FF00;">diet-vision.com</a> peut utiliser des cookies techniques strictement nécessaires au bon fonctionnement du site (session, préférences de langue). Aucun cookie de tracking ou analytique tiers n'est déposé sans votre consentement explicite.</p>
+    </section>
+
+    <!-- 9. Mineurs -->
+    <section id="mineurs">
+      <h2><span class="num">9</span> Mineurs</h2>
+      <p>DietVision est destiné aux personnes âgées de <strong style="color:#ddd;">15 ans et plus</strong>. Conformément à la loi française « Informatique et Libertés » (art. 45), les mineurs de moins de 15 ans doivent obtenir le consentement d'un parent ou tuteur légal avant de créer un compte. Nous ne collectons pas sciemment de données personnelles concernant des enfants de moins de 15 ans sans consentement parental. Si vous êtes parent ou tuteur et pensez que votre enfant nous a fourni des données, contactez-nous immédiatement à <a href="mailto:support@diet-vision.com" style="color:#C8FF00;">support@diet-vision.com</a>.</p>
+    </section>
+
+    <!-- 10. Contact -->
+    <section id="contact">
+      <h2><span class="num">10</span> Nous contacter</h2>
+      <div class="contact-card">
+        <p>Une question sur vos données ? Un droit à exercer ? Notre équipe vous répond sous 30 jours.</p>
+        <a href="mailto:support@diet-vision.com" class="contact-link">
+          ✉️ support@diet-vision.com
+        </a>
+        <p style="margin-top:16px; font-size:13px;">Ou écrivez-nous directement depuis l'application : Menu → Aide & Support</p>
+      </div>
+    </section>
+
+    <!-- Mise à jour -->
+    <div class="highlight" style="margin-top:40px;">
+      <strong>Modifications de cette politique :</strong> Nous pouvons mettre à jour cette politique de confidentialité. En cas de changement significatif, vous serez notifié par e-mail et/ou par une notification dans l'application. La date de dernière mise à jour est indiquée en haut de cette page.
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      <a href="https://diet-vision.com">DietVision</a> &nbsp;·&nbsp;
+      <a href="https://diet-vision.com/politique-confidentialite">Politique de confidentialité</a> &nbsp;·&nbsp;
+      <a href="mailto:support@diet-vision.com">support@diet-vision.com</a>
+    </p>
+    <p style="margin-top:8px;">© 2025 DietVision. Tous droits réservés.</p>
+  </footer>
+
+</body>
+</html>

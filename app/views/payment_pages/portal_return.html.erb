@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<%
+  locale = params[:locale].to_s
+  locale = 'fr' unless %w[fr en de es pt].include?(locale)
+
+  translations = {
+    'fr' => {
+      lang:  'fr',
+      title: 'Retour depuis le portail',
+      desc:  'Vos modifications ont été enregistrées. Retournez dans l&rsquo;application DietVision pour continuer.',
+      note:  'Les changements d&rsquo;abonnement peuvent prendre quelques secondes à se refléter dans l&rsquo;app.'
+    },
+    'en' => {
+      lang:  'en',
+      title: 'Back from the portal',
+      desc:  'Your changes have been saved. Go back to the DietVision app to continue.',
+      note:  'Subscription changes may take a few seconds to reflect in the app.'
+    },
+    'de' => {
+      lang:  'de',
+      title: 'Zur&uuml;ck vom Portal',
+      desc:  'Ihre &Auml;nderungen wurden gespeichert. Kehren Sie zur DietVision-App zur&uuml;ck, um fortzufahren.',
+      note:  'Abonnement&auml;nderungen k&ouml;nnen einige Sekunden dauern, bis sie in der App angezeigt werden.'
+    },
+    'es' => {
+      lang:  'es',
+      title: 'De vuelta desde el portal',
+      desc:  'Sus cambios han sido guardados. Vuelva a la aplicaci&oacute;n DietVision para continuar.',
+      note:  'Los cambios de suscripci&oacute;n pueden tardar unos segundos en reflejarse en la app.'
+    },
+    'pt' => {
+      lang:  'pt',
+      title: 'De volta do portal',
+      desc:  'Suas altera&ccedil;&otilde;es foram salvas. Volte ao aplicativo DietVision para continuar.',
+      note:  'As altera&ccedil;&otilde;es de assinatura podem levar alguns segundos para aparecer no app.'
+    },
+  }
+  t = translations[locale]
+%>
+<html lang="<%= t[:lang] %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DietVision &mdash; <%= t[:title] %></title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0A0A0F; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #1A1A2E; border: 1px solid #2A2A3E; border-radius: 24px; padding: 48px 32px; max-width: 420px; width: 100%; text-align: center; }
+    .icon { width: 80px; height: 80px; background: rgba(0,255,136,0.12); border: 1.5px solid rgba(0,255,136,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; }
+    h1 { font-size: 22px; font-weight: 900; margin-bottom: 12px; }
+    h1 span { color: #00FF88; }
+    p { color: #94A3B8; font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+    .note { font-size: 12px; color: #64748B; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">&#10003;</div>
+    <h1><span><%= t[:title] %></span></h1>
+    <p><%= t[:desc] %></p>
+    <p class="note"><%= t[:note] %></p>
+  </div>
+</body>
+</html>

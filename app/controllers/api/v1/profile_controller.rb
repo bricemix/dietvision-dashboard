@@ -41,6 +41,7 @@ module Api
       # PUT /api/v1/user/fitai  (also aliased as PUT /api/v1/user/profile)
       def fitai_update
         body = json_body
+        return if reject_if_too_large!
         # Accept both top-level keys and nested fitai_profile key
         profile_data = body['fitai_profile'] || body
 
@@ -63,6 +64,7 @@ module Api
       # PUT /api/v1/user/body_entries
       def body_entries_update
         body = json_body
+        return if reject_if_too_large!
         entries_data = body['body_entries'] || body
 
         unless entries_data.is_a?(Array)
@@ -89,6 +91,7 @@ module Api
       # PUT /api/v1/user/meals
       def meals_update
         body = json_body
+        return if reject_if_too_large!
         meals_data = body['meals'] || body
 
         unless meals_data.is_a?(Array)
@@ -104,6 +107,36 @@ module Api
         end
       end
 
+      # ── Daily missions ──────────────────────────────────────────────────────
+
+      # GET /api/v1/user/missions
+      def missions_show
+        data = parse_json(current_user.missions_data)
+        render json: { missions: data || {} }
+      end
+
+      # PUT /api/v1/user/missions
+      def missions_update
+        body = json_body
+        return if reject_if_too_large!
+        missions_data = body["missions"] || body
+
+        unless missions_data.is_a?(Hash)
+          render json: { error: "Format invalide" }, status: :bad_request
+          return
+        end
+
+        existing = parse_json(current_user.missions_data) || {}
+        merged = existing.merge(missions_data)
+
+        if current_user.update(missions_data: merged.to_json)
+          render json: { ok: true, days_saved: merged.size }
+        else
+          render json: { error: current_user.errors.full_messages.join(", ") }, status: :unprocessable_entity
+        end
+      end
+
+
       # ── Weekly planning ──────────────────────────────────────────────────────
 
       # GET /api/v1/user/planning
@@ -115,6 +148,7 @@ module Api
       # PUT /api/v1/user/planning
       def planning_update
         body = json_body
+        return if reject_if_too_large!
         # Accept {"planning":[...]} or {"days":[...]} or raw array
         plans_data = body['planning'] || body['days'] || body
 
@@ -153,14 +187,27 @@ module Api
       end
 
       # Lit et parse le corps JSON de la requête (robuste, évite ActionController::Parameters)
+      # Taille max d'un blob JSON utilisateur (profil, repas, planning, mesures).
+      MAX_JSON_BYTES = 512_000  # 512 Ko
+
       def json_body
         raw = request.body.read
         request.body.rewind
         return {} if raw.blank?
+        @json_too_large = raw.bytesize > MAX_JSON_BYTES
+        return {} if @json_too_large
         body = JSON.parse(raw)
         body.is_a?(Hash) ? body : {}
       rescue JSON::ParserError
         {}
+      end
+
+      # Rend une 413 si le dernier json_body dépassait la limite. Retourne true si bloqué.
+      def reject_if_too_large!
+        return false unless @json_too_large
+        render json: { error: "Données trop volumineuses (max 512 Ko)" },
+               status: :payload_too_large
+        true
       end
 
       def parse_json(raw)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Abonnement Premium activé — DietVision</title>
+  <title>Abonnement <%= @plan_name %> activé — DietVision</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background-color: #f4f4f8; font-family: 'Helvetica Neue', Arial, sans-serif; }
@@ -58,38 +58,48 @@
       <p class="greeting">Félicitations, <%= @user.name %> ! 🎉</p>
 
       <p class="text">
-        Votre abonnement DietVision Premium est maintenant actif.
+        Votre abonnement DietVision <strong><%= @plan_name %></strong> est maintenant actif.
         Profitez de toutes les fonctionnalités sans limite !
       </p>
 
       <!-- Success -->
       <div class="success-box">
         <div class="success-icon">✅</div>
-        <div class="success-title">Premium activé avec succès</div>
+        <div class="success-title"><%= @plan_name %> activé avec succès</div>
         <div class="success-date">Valable jusqu'au <%= @expires_at.strftime("%d/%m/%Y") %></div>
       </div>
 
-      <!-- Features -->
+      <!-- Features — dynamiques selon le plan -->
       <div class="features">
         <div class="feature">
-          <span class="feature-icon">♾️</span>
+          <span class="feature-icon">📸</span>
           <div class="feature-text">
-            <span class="feature-title">Analyses illimitées</span>
-            Photographiez autant de repas que vous le souhaitez, sans restriction quotidienne.
+            <% scan_limit = case @plan_level
+                            when "premium" then AppConfig.premium_scan_daily_limit
+                            when "pro"     then AppConfig.pro_scan_daily_limit
+                            else                AppConfig.starter_scan_daily_limit
+                            end %>
+            <span class="feature-title"><%= scan_limit %> analyses photo / jour</span>
+            Photographiez vos repas et obtenez l'analyse nutritionnelle complète en secondes.
           </div>
         </div>
         <div class="feature">
           <span class="feature-icon">🤖</span>
           <div class="feature-text">
-            <span class="feature-title">Coach IA avancé</span>
-            Accès au modèle IA le plus puissant pour des conseils personnalisés ultra-précis.
+            <% chat_limit = case @plan_level
+                            when "premium" then AppConfig.premium_chat_daily_limit
+                            when "pro"     then AppConfig.pro_chat_daily_limit
+                            else                "illimités"
+                            end %>
+            <span class="feature-title"><%= chat_limit %> échanges coach IA / jour</span>
+            Posez toutes vos questions nutritionnelles à votre coach IA personnel.
           </div>
         </div>
         <div class="feature">
           <span class="feature-icon">📊</span>
           <div class="feature-text">
-            <span class="feature-title">Historique & export complets</span>
-            Consultez tout votre historique nutritionnel et exportez vos données.
+            <span class="feature-title">Historique & suivi complets</span>
+            Consultez votre historique nutritionnel, suivez vos macros et vos progrès.
           </div>
         </div>
         <div class="feature">
@@ -103,7 +113,7 @@
 
       <!-- CTA -->
       <div class="cta-wrap">
-        <a href="https://diet-vision.com" class="cta">Accéder à Premium</a>
+        <a href="https://diet-vision.com" class="cta">Accéder à <%= @plan_name %></a>
       </div>
 
       <p class="text" style="font-size:13px; color:#7070a0; margin-top:12px; margin-bottom:0;">

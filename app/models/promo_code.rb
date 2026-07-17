@@ -2,6 +2,9 @@ class PromoCode < ApplicationRecord
   DISCOUNT_TYPES = %w[percent fixed].freeze
   STATUSES       = %w[active expired disabled].freeze
 
+  has_many :promo_code_redemptions, dependent: :destroy
+  has_many :redeeming_users, through: :promo_code_redemptions, source: :user
+
   validates :code,           presence: true, uniqueness: { case_sensitive: false }
   validates :discount_type,  inclusion: { in: DISCOUNT_TYPES }
   validates :discount_value, numericality: { greater_than: 0 }
@@ -26,6 +29,19 @@ class PromoCode < ApplicationRecord
     self.applicable_plans_json = Array(arr).reject(&:blank?).to_json
   end
 
+  def notification_emails
+    JSON.parse(notification_emails_json || "[]") rescue []
+  end
+
+  # Accepte un tableau OU une chaîne (emails séparés par virgule/saut de ligne),
+  # pour supporter à la fois un formulaire multi-champs et un simple textarea.
+  def notification_emails=(value)
+    list = value.is_a?(String) ? value.split(/[,\n]/) : Array(value)
+    self.notification_emails_json = list.map(&:to_s).map(&:strip).reject(&:blank?)
+                                         .select { |e| e.match?(URI::MailTo::EMAIL_REGEXP) }
+                                         .uniq.to_json
+  end
+
   # ── Business logic ──────────────────────────────────────────
 
   def valid_now?
@@ -33,6 +49,18 @@ class PromoCode < ApplicationRecord
       (starts_at.nil? || starts_at <= Time.current) &&
       (expires_at.nil? || expires_at >= Time.current) &&
       (max_uses_total.nil? || uses_count < max_uses_total)
+  end
+
+  # Statut réel tenant compte de la date d'expiration, sans dépendre d'un job
+  # planifié pour mettre à jour la colonne `status` en base (celle-ci ne change
+  # que sur désactivation manuelle ou atteinte du quota max_uses_total).
+  def effective_status
+    return "expired" if status == "active" && expires_at.present? && expires_at < Time.current
+    status
+  end
+
+  def expired_by_date?
+    expires_at.present? && expires_at < Time.current
   end
 
   # BUG-14 FIXÉ : with_lock pour éviter la race condition sur uses_count

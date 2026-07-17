@@ -32,6 +32,7 @@
         <th class="text-left px-4 py-3 font-medium">Réduction</th>
         <th class="text-left px-4 py-3 font-medium">Utilisations</th>
         <th class="text-left px-4 py-3 font-medium">Expiration</th>
+        <th class="text-left px-4 py-3 font-medium">Stripe</th>
         <th class="text-left px-4 py-3 font-medium">Statut</th>
         <th class="text-right px-5 py-3 font-medium">Actions</th>
       </tr>
@@ -48,10 +49,9 @@
           </td>
           <td class="px-4 py-3">
             <div class="text-sm text-gray-200">
-              <%= pc.uses_count %>
+              <%= link_to pc.uses_count, admin_promo_code_path(pc), class: "hover:underline lime" %>
               <% if pc.max_uses_total %>
                 <span class="text-gray-600">/ <%= pc.max_uses_total %></span>
-                <%# Mini progress bar %>
                 <div class="w-16 bg-gray-800 rounded-full h-1 mt-1">
                   <% pct = [(pc.uses_count.to_f / pc.max_uses_total * 100).round, 100].min %>
                   <div class="rounded-full h-1" style="width:<%= pct %>%;background:#C8FF00"></div>
@@ -59,6 +59,9 @@
               <% else %>
                 <span class="text-gray-600">/ ∞</span>
               <% end %>
+            </div>
+            <div class="text-[10px] text-gray-600 mt-0.5">
+              <%= @unique_users_by_code[pc.id] || 0 %> utilisateur(s) unique(s)
             </div>
           </td>
           <td class="px-4 py-3 text-xs text-gray-400">
@@ -73,17 +76,44 @@
               <span class="text-gray-600">Sans limite</span>
             <% end %>
           </td>
+
+          <%# Colonne Stripe — coupon + promotion code %>
+          <td class="px-4 py-3">
+            <% if pc.stripe_coupon_id.present? && pc.stripe_promotion_code_id.present? %>
+              <div class="flex items-center gap-1 text-xs text-green-500" title="Coupon : <%= pc.stripe_coupon_id %>\nPromo code : <%= pc.stripe_promotion_code_id %>">
+                <span>⚡</span>
+                <span class="font-mono text-green-600">…<%= pc.stripe_promotion_code_id.last(8) %></span>
+              </div>
+              <div class="text-[10px] text-gray-600 mt-0.5">Sync OK</div>
+            <% elsif pc.stripe_coupon_id.present? %>
+              <div class="text-xs text-yellow-500" title="Coupon créé (<%= pc.stripe_coupon_id %>) mais PromotionCode manquant">
+                ⚠ Partiel
+              </div>
+            <% else %>
+              <div class="text-xs text-orange-500/80">✗ Non sync</div>
+            <% end %>
+          </td>
+
           <td class="px-4 py-3">
             <span class="text-xs font-semibold px-2 py-0.5 rounded-full
-              <%= pc.status == 'active' ? 'bg-green-900/40 text-green-400' :
-                  pc.status == 'expired' ? 'bg-yellow-900/30 text-yellow-500' :
+              <%= pc.effective_status == 'active' ? 'bg-green-900/40 text-green-400' :
+                  pc.effective_status == 'expired' ? 'bg-yellow-900/30 text-yellow-500' :
                   'bg-red-900/30 text-red-400' %>">
-              <%= pc.status.upcase %>
+              <%= pc.effective_status.upcase %>
             </span>
           </td>
           <td class="px-5 py-3 text-right">
             <div class="flex items-center justify-end gap-2">
               <%= link_to "Modifier", edit_admin_promo_code_path(pc), class: "text-xs lime hover:underline" %>
+
+              <%# Bouton re-sync Stripe %>
+              <%= button_to sync_stripe_admin_promo_code_path(pc), method: :post,
+                    class: "text-xs text-indigo-400 hover:underline bg-transparent border-0 cursor-pointer p-0",
+                    title: pc.stripe_coupon_id.present? ? "Re-synchroniser avec Stripe" : "Créer sur Stripe",
+                    data: { turbo_confirm: pc.stripe_coupon_id.present? ? "Re-synchroniser #{pc.code} avec Stripe ?" : nil } do %>
+                <%= pc.stripe_coupon_id.present? ? "⟳ Stripe" : "→ Stripe" %>
+              <% end %>
+
               <% if pc.status == "active" %>
                 <%= button_to "Désactiver", disable_admin_promo_code_path(pc), method: :post,
                       class: "text-xs text-yellow-400 hover:underline bg-transparent border-0 cursor-pointer p-0" %>
@@ -96,7 +126,7 @@
         </tr>
       <% end %>
       <% if @promo_codes.empty? %>
-        <tr><td colspan="6" class="px-5 py-10 text-center text-gray-600">Aucun code promo</td></tr>
+        <tr><td colspan="7" class="px-5 py-10 text-center text-gray-600">Aucun code promo</td></tr>
       <% end %>
     </tbody>
   </table>

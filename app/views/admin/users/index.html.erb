@@ -1,54 +1,118 @@
 <% content_for :title, "Utilisateurs" %>
 
-<div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+<%# ══════════════════════════════════════════════════════════
+    KPI CARDS
+══════════════════════════════════════════════════════════ %>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+  <% [
+    { label: "Total",       value: @stats[:total],     icon: "👥", color: "text-white" },
+    { label: "Actifs",      value: @stats[:active],    icon: "✅", color: "text-green-400" },
+    { label: "Suspendus",   value: @stats[:suspended], icon: "🚫", color: "text-red-400" },
+    { label: "En essai",    value: @stats[:trial],     icon: "⏱",  color: "text-purple-400" },
+    { label: "Abonnés",     value: @stats[:paid],      icon: "💳", color: "text-yellow-400" },
+    { label: "Cette semaine", value: @stats[:new_week], icon: "📈", color: "text-[#C8FF00]" },
+  ].each do |card| %>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex flex-col gap-1">
+      <div class="flex items-center gap-1.5 text-xs text-gray-500">
+        <span><%= card[:icon] %></span>
+        <span><%= card[:label] %></span>
+      </div>
+      <div class="text-2xl font-bold <%= card[:color] %>"><%= card[:value] %></div>
+    </div>
+  <% end %>
+</div>
+
+<%# ══════════════════════════════════════════════════════════
+    FILTRES + ACTIONS
+══════════════════════════════════════════════════════════ %>
+<div class="mb-5 flex flex-col sm:flex-row gap-3">
+  <%# Barre de recherche + filtres %>
   <%= form_with url: admin_users_path, method: :get, class: "flex gap-2 flex-1 flex-wrap" do |f| %>
-    <%= f.text_field :q, value: params[:q], placeholder: "Nom ou email…",
-          class: "flex-1 min-w-[160px] max-w-xs px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500" %>
+    <%# Recherche %>
+    <div class="relative flex-1 min-w-[180px] max-w-xs">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <%= f.text_field :q, value: params[:q], placeholder: "Nom ou email…",
+            class: "w-full pl-8 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-[#C8FF00] focus:outline-none" %>
+    </div>
+
+    <%# Plan %>
     <%= f.select :plan,
           [["Tous plans", ""]] + @plans.map { |p| [p.name, p.slug] },
           { selected: params[:plan] },
-          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-[#C8FF00] focus:outline-none" %>
+
+    <%# Statut %>
     <%= f.select :status,
-          [["Tous statuts", ""], ["Actif", "active"], ["Suspendu", "suspended"]],
+          [["Tous statuts", ""], ["✅ Actif", "active"], ["🚫 Suspendu", "suspended"]],
           { selected: params[:status] },
-          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white" %>
-    <label class="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer">
+          class: "px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-[#C8FF00] focus:outline-none" %>
+
+    <%# Essai %>
+    <label class="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-600 transition-colors">
       <input type="checkbox" name="trial" value="1" <%= params[:trial] == "1" ? "checked" : "" %>
-             class="accent-lime-400">
-      <span class="text-sm text-gray-300">En essai</span>
+             class="accent-[#C8FF00]">
+      <span class="text-sm text-gray-300 whitespace-nowrap">⏱ En essai</span>
     </label>
-    <%= f.submit "Filtrer",
-          class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer transition-colors" %>
+
+    <div class="flex gap-2">
+      <%= f.submit "Filtrer",
+            class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg cursor-pointer transition-colors" %>
+      <% if params[:q].present? || params[:plan].present? || params[:status].present? || params[:trial].present? %>
+        <%= link_to admin_users_path, class: "px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 text-sm rounded-lg transition-colors flex items-center gap-1", title: "Effacer les filtres" do %>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Effacer
+        <% end %>
+      <% end %>
+    </div>
   <% end %>
 
-  <div class="flex items-center gap-3 flex-shrink-0">
-    <div class="text-sm text-gray-500"><%= @pagy.count %> utilisateurs</div>
+  <%# Boutons d'actions %>
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <%# Compteur filtré %>
+    <span class="text-sm text-gray-500 whitespace-nowrap">
+      <%= @pagy.count %> <span class="hidden sm:inline">utilisateur<%= "s" if @pagy.count != 1 %></span>
+    </span>
+
+    <%# Export CSV %>
+    <%= link_to admin_users_path(format: :csv, q: params[:q], plan: params[:plan], status: params[:status], trial: params[:trial]),
+          class: "flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-sm rounded-lg transition-colors",
+          title: "Exporter en CSV" do %>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      CSV
+    <% end %>
 
     <%# Supprimer tous %>
-    <button type="button" onclick="openDeleteAllModal(<%= @pagy.count %>)"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border"
-            style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)">
+    <button type="button" onclick="openDeleteAllModal(<%= @stats[:total] %>)"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+            style="background:rgba(239,68,68,0.08);color:#f87171;border-color:rgba(239,68,68,0.25)"
+            title="Supprimer tous les utilisateurs">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>
       </svg>
-      Supprimer tous
+      <span class="hidden sm:inline">Supprimer tous</span>
     </button>
 
+    <%# Créer un utilisateur %>
     <button type="button" onclick="openCreatePanel()"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+            class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
             style="background:#C8FF00;color:#0f172a">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Créer un utilisateur
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="hidden sm:inline">Créer</span>
     </button>
   </div>
 </div>
 
-<%# ── Modale suppression TOUS les utilisateurs ──────────────────────────────── %>
+<%# ══════════════════════════════════════════════════════════
+    MODALE SUPPRESSION TOUS
+══════════════════════════════════════════════════════════ %>
 <div id="delete-all-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
   <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeDeleteAllModal()"></div>
   <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-4">
     <div class="bg-gray-900 border border-red-800/70 rounded-2xl shadow-2xl overflow-hidden">
-      <%# Header %>
       <div class="px-5 py-4 border-b border-gray-800 flex items-center gap-3">
         <span class="flex items-center justify-center w-9 h-9 rounded-full bg-red-950 border border-red-800">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -60,24 +124,19 @@
           <p class="text-xs text-red-400 mt-0.5 font-medium">Action irréversible — impossible à annuler</p>
         </div>
       </div>
-      <%# Body %>
       <div class="px-5 py-4 space-y-4">
         <div class="p-3 bg-red-950/50 border border-red-900/50 rounded-xl text-xs text-red-200 leading-relaxed space-y-1">
           <p>⚠ Cette action va supprimer <strong id="da-count" class="text-white text-sm"></strong> compte(s) utilisateur(s).</p>
           <p>Tous les abonnements, paiements et données IA associés seront également effacés.</p>
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1.5">
-            Entrez le mot de passe admin pour confirmer
-          </label>
-          <input id="da-password" type="password" placeholder="Mot de passe…"
-                 autocomplete="off"
+          <label class="block text-xs text-gray-400 mb-1.5">Entrez le mot de passe admin pour confirmer</label>
+          <input id="da-password" type="password" placeholder="Mot de passe…" autocomplete="off"
                  class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-600 focus:border-red-500 focus:outline-none"
                  onkeydown="if(event.key==='Enter')submitDeleteAll()">
-          <p id="da-error" class="text-xs text-red-400 mt-1.5 hidden">Mot de passe incorrect.</p>
+          <p id="da-error" class="text-xs text-red-400 mt-1.5 hidden">Veuillez saisir le mot de passe admin.</p>
         </div>
       </div>
-      <%# Footer %>
       <div class="px-5 pb-4 flex gap-2 justify-end">
         <button type="button" onclick="closeDeleteAllModal()"
                 class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors">
@@ -97,7 +156,9 @@
   <input type="hidden" name="confirm_password" id="da-hidden-pwd">
 <% end %>
 
-<%# ── Slide-over panel création utilisateur ── %>
+<%# ══════════════════════════════════════════════════════════
+    SLIDE-OVER CRÉATION UTILISATEUR
+══════════════════════════════════════════════════════════ %>
 <div id="create-overlay" onclick="if(event.target===this)closeCreatePanel()"
      class="fixed inset-0 z-50 hidden"
      style="background:rgba(0,0,0,0.6);backdrop-filter:blur(3px)">
@@ -105,7 +166,6 @@
        class="absolute right-0 top-0 h-full w-full max-w-lg bg-gray-950 border-l border-gray-800 overflow-y-auto"
        style="transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)">
 
-    <%# Header %>
     <div class="flex items-center justify-between px-6 py-5 border-b border-gray-800">
       <div>
         <h2 class="text-base font-bold text-white">Créer un utilisateur</h2>
@@ -143,15 +203,15 @@
             <div>
               <label class="block text-xs text-gray-400 mb-1">Statut</label>
               <select name="user[status]" class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-[#C8FF00] focus:outline-none">
-                <option value="active">✓ Actif</option>
-                <option value="suspended">✗ Suspendu</option>
+                <option value="active">✅ Actif</option>
+                <option value="suspended">🚫 Suspendu</option>
               </select>
             </div>
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">
               Mot de passe temporaire
-              <span class="text-gray-600 font-normal">(laissez vide = généré automatiquement)</span>
+              <span class="text-gray-600 font-normal">(vide = auto-généré)</span>
             </label>
             <input type="text" name="user[password]" placeholder="Laissez vide pour auto-générer"
                    autocomplete="new-password"
@@ -164,11 +224,8 @@
       <%# Section 2 — Plan %>
       <div class="border-t border-gray-800 pt-5">
         <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">💳 Plan & Accès</div>
-
-        <% # Données plans pour le JS %>
         <% plans_data = @plans.map { |p| { slug: p.slug, name: p.name, free: p.price_eur_cents == 0 } } %>
         <script>const PLANS_DATA = <%= plans_data.to_json.html_safe %>;</script>
-
         <div class="space-y-3">
           <div>
             <label class="block text-xs text-gray-400 mb-2">Plan attribué</label>
@@ -204,35 +261,26 @@
                 <% end %>
               </div>
             <% else %>
-              <%# Fallback si aucun plan en BDD %>
               <div class="grid grid-cols-2 gap-2">
-                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer"
                        onclick="handlePlanChange('free')">
                   <input type="radio" name="user[plan]" value="free" checked class="accent-[#C8FF00]" id="plan-free">
-                  <div>
-                    <div class="text-sm font-semibold text-white">Gratuit</div>
-                    <div class="text-xs text-gray-500">Accès limité</div>
-                  </div>
+                  <div><div class="text-sm font-semibold text-white">Gratuit</div><div class="text-xs text-gray-500">Accès limité</div></div>
                 </label>
-                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors"
+                <label class="plan-radio-label flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer"
                        onclick="handlePlanChange('premium')">
                   <input type="radio" name="user[plan]" value="premium" class="accent-[#C8FF00]" id="plan-premium">
-                  <div>
-                    <div class="text-sm font-semibold text-white">Premium</div>
-                    <div class="text-xs text-gray-500">Accès complet</div>
-                  </div>
+                  <div><div class="text-sm font-semibold text-white">Premium</div><div class="text-xs text-gray-500">Accès complet</div></div>
                 </label>
               </div>
             <% end %>
           </div>
 
-          <%# Durée abonnement (affiché si plan payant sélectionné) %>
           <div id="premium-options" class="hidden">
             <label class="block text-xs text-gray-400 mb-1">Durée d'accès</label>
             <div class="flex gap-2 flex-wrap mb-2">
-              <% [[30,"30 jours"],[90,"3 mois"],[180,"6 mois"],[365,"1 an"]].each do |days, label| %>
-                <button type="button"
-                        onclick="setDays(<%= days %>)"
+              <% [[30,"30 j"],[90,"3 mois"],[180,"6 mois"],[365,"1 an"]].each do |days, label| %>
+                <button type="button" onclick="setDays(<%= days %>)"
                         class="days-preset px-3 py-1.5 bg-gray-700 hover:bg-[#C8FF00] hover:text-black text-gray-300 text-xs rounded-md transition-colors font-medium">
                   <%= label %>
                 </button>
@@ -259,9 +307,8 @@
         <div id="trial-options" class="hidden">
           <label class="block text-xs text-gray-400 mb-1">Durée de l'essai</label>
           <div class="flex gap-2 flex-wrap mb-2">
-            <% [[7,"7 jours"],[14,"14 jours"],[30,"30 jours"]].each do |days, label| %>
-              <button type="button"
-                      onclick="setTrialDays(<%= days %>)"
+            <% [[7,"7 j"],[14,"14 j"],[30,"30 j"]].each do |days, label| %>
+              <button type="button" onclick="setTrialDays(<%= days %>)"
                       class="trial-preset px-3 py-1.5 bg-gray-700 hover:bg-purple-700 text-gray-300 text-xs rounded-md transition-colors">
                 <%= label %>
               </button>
@@ -276,7 +323,6 @@
         </div>
       </div>
 
-      <%# Actions %>
       <div class="border-t border-gray-800 pt-5 flex gap-3">
         <button type="submit"
                 class="flex-1 py-3 rounded-lg text-sm font-bold transition-colors"
@@ -288,123 +334,193 @@
           Annuler
         </button>
       </div>
-
     <% end %>
   </div>
 </div>
 
+<%# ══════════════════════════════════════════════════════════
+    TABLE UTILISATEURS
+══════════════════════════════════════════════════════════ %>
 <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
   <table class="w-full text-sm">
     <thead>
-      <tr class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
-        <th class="text-left px-5 py-3 font-medium">Utilisateur</th>
-        <th class="text-left px-4 py-3 font-medium">Pays</th>
-        <th class="text-left px-4 py-3 font-medium">Plan</th>
-        <th class="text-left px-4 py-3 font-medium">Essai</th>
-        <th class="text-left px-4 py-3 font-medium">Statut</th>
-        <th class="text-left px-4 py-3 font-medium">Inscription</th>
-        <th class="text-right px-5 py-3 font-medium">Actions</th>
+      <tr class="border-b border-gray-800 text-[11px] text-gray-500 uppercase tracking-wide bg-gray-900/80">
+        <th class="text-left px-5 py-3 font-semibold">Utilisateur</th>
+        <th class="text-left px-4 py-3 font-semibold hidden md:table-cell">Pays</th>
+        <th class="text-left px-4 py-3 font-semibold">Plan</th>
+        <th class="text-left px-4 py-3 font-semibold hidden lg:table-cell">Abonnement</th>
+        <th class="text-left px-4 py-3 font-semibold hidden sm:table-cell">Statut</th>
+        <th class="text-left px-4 py-3 font-semibold hidden xl:table-cell">Inscription</th>
+        <th class="text-right px-5 py-3 font-semibold">Actions</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-800">
+    <tbody class="divide-y divide-gray-800/60">
       <% @users.each do |user| %>
-        <tr class="hover:bg-gray-800/50 transition-colors clickable"
+        <tr class="hover:bg-gray-800/40 transition-colors cursor-pointer group"
             onclick="window.location='<%= admin_user_path(user) %>'">
+
+          <%# Utilisateur — avatar + nom + email + trial badge %>
           <td class="px-5 py-3">
-            <div class="font-medium text-gray-100"><%= user.name %></div>
-            <div class="text-xs text-gray-500"><%= user.email %></div>
+            <div class="flex items-center gap-3">
+              <%# Avatar initiales %>
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                   style="background:rgba(200,255,0,0.1);color:#C8FF00;border:1px solid rgba(200,255,0,0.2)">
+                <%= user.name.to_s.split.first(2).map { |w| w[0] }.join.upcase.presence || "?" %>
+              </div>
+              <div class="min-w-0">
+                <div class="font-medium text-gray-100 truncate flex items-center gap-1.5">
+                  <%= user.name %>
+                  <% if user.in_trial? %>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-900/50 text-purple-400 font-semibold flex-shrink-0">J-<%= user.trial_days_remaining %></span>
+                  <% end %>
+                </div>
+                <div class="text-xs text-gray-500 truncate"><%= user.email %></div>
+              </div>
+            </div>
           </td>
-          <td class="px-4 py-3 text-gray-400"><%= user.country %></td>
+
+          <%# Pays %>
+          <td class="px-4 py-3 hidden md:table-cell">
+            <span class="text-gray-400 text-xs"><%= user.country.presence || "—" %></span>
+          </td>
+
+          <%# Plan badge %>
           <td class="px-4 py-3"><%= status_badge(user.plan) %></td>
-          <td class="px-4 py-3">
-            <% if user.in_trial? %>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400">
-                J-<%= user.trial_days_remaining %>
-              </span>
-            <% elsif user.had_trial? %>
-              <span class="text-xs text-gray-600">Terminé</span>
-            <% else %>
+
+          <%# Abonnement (expiry) %>
+          <td class="px-4 py-3 hidden lg:table-cell">
+            <% if user.subscription_expires_at %>
+              <% days_left = ((user.subscription_expires_at - Time.current) / 1.day).round %>
+              <% color = days_left > 30 ? "text-green-400" : days_left > 7 ? "text-yellow-400" : "text-red-400" %>
+              <div class="text-xs <%= color %> font-medium"><%= days_left > 0 ? "#{days_left}j restants" : "Expiré" %></div>
+              <div class="text-[10px] text-gray-600"><%= user.subscription_expires_at.strftime("%d/%m/%Y") %></div>
+            <% elsif user.plan == "free" %>
               <span class="text-xs text-gray-700">—</span>
+            <% else %>
+              <span class="text-xs text-gray-600">Indéfini</span>
             <% end %>
           </td>
-          <td class="px-4 py-3"><%= status_badge(user.status) %></td>
-          <td class="px-4 py-3 text-gray-400 text-xs"><%= user.created_at.strftime("%d/%m/%Y") %></td>
-          <td class="px-5 py-3 text-right">
-            <div class="flex items-center justify-end gap-3">
-              <%= link_to "Voir", admin_user_path(user),
-                    class: "text-xs lime hover:underline",
-                    onclick: "event.stopPropagation()" %>
-              <%= link_to "Data", data_admin_user_path(user),
-                    class: "text-xs text-blue-400 hover:text-blue-300 hover:underline transition-colors",
-                    title: "Voir les données (repas, profil, mesures, planning)",
-                    onclick: "event.stopPropagation()" %>
+
+          <%# Statut %>
+          <td class="px-4 py-3 hidden sm:table-cell"><%= status_badge(user.status) %></td>
+
+          <%# Date inscription %>
+          <td class="px-4 py-3 hidden xl:table-cell text-gray-500 text-xs">
+            <%= user.created_at.strftime("%d/%m/%Y") %>
+          </td>
+
+          <%# Actions %>
+          <td class="px-5 py-3 text-right" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <%= link_to admin_user_path(user),
+                    class: "text-xs px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-[#C8FF00] font-medium transition-colors",
+                    title: "Voir le profil" do %>
+                Voir
+              <% end %>
+              <%= link_to data_admin_user_path(user),
+                    class: "text-xs px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-blue-400 font-medium transition-colors",
+                    title: "Données utilisateur" do %>
+                Data
+              <% end %>
               <% if user.status == "active" %>
-                <%= button_to "Suspendre", suspend_admin_user_path(user), method: :post,
-                      class: "text-xs text-red-400 hover:underline bg-transparent border-0 cursor-pointer p-0",
-                      onclick: "event.stopPropagation()" %>
+                <%= button_to suspend_admin_user_path(user), method: :post,
+                      class: "text-xs px-2.5 py-1 rounded-md bg-red-950/50 hover:bg-red-900/60 text-red-400 font-medium transition-colors border-0 cursor-pointer",
+                      title: "Suspendre" do %>
+                  Suspendre
+                <% end %>
               <% else %>
-                <%= button_to "Activer", activate_admin_user_path(user), method: :post,
-                      class: "text-xs lime hover:underline bg-transparent border-0 cursor-pointer p-0",
-                      onclick: "event.stopPropagation()" %>
+                <%= button_to activate_admin_user_path(user), method: :post,
+                      class: "text-xs px-2.5 py-1 rounded-md bg-green-950/50 hover:bg-green-900/60 text-green-400 font-medium transition-colors border-0 cursor-pointer",
+                      title: "Réactiver" do %>
+                  Activer
+                <% end %>
               <% end %>
             </div>
           </td>
         </tr>
       <% end %>
+
       <% if @users.empty? %>
-        <tr><td colspan="7" class="px-5 py-10 text-center text-gray-600">Aucun utilisateur</td></tr>
+        <tr>
+          <td colspan="7" class="px-5 py-16 text-center">
+            <div class="flex flex-col items-center gap-3 text-gray-600">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-40">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <div class="text-sm font-medium">Aucun utilisateur trouvé</div>
+              <% if params[:q].present? || params[:plan].present? || params[:status].present? %>
+                <p class="text-xs text-gray-700">Essayez d'élargir vos filtres</p>
+                <%= link_to "Effacer les filtres", admin_users_path, class: "text-xs text-[#C8FF00] hover:underline" %>
+              <% end %>
+            </div>
+          </td>
+        </tr>
       <% end %>
     </tbody>
   </table>
 </div>
+
 <%= render "shared/pagination", pagy: @pagy %>
 
+<%# ══════════════════════════════════════════════════════════
+    SECTION VÉRIFICATION STRIPE
+══════════════════════════════════════════════════════════ %>
+<div class="mt-8 p-5 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4">
+  <div class="flex-1">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="text-lg">🔍</span>
+      <h3 class="font-bold text-white text-sm">Vérification Stripe / Cohérence DB</h3>
+    </div>
+    <p class="text-xs text-gray-500 leading-relaxed">
+      Compare les paiements Stripe avec l'état des abonnements en base : plans manquants, abonnements expirés non détectés, désynchronisations expires_at, paiements sans abonnement actif…
+    </p>
+  </div>
+  <div class="flex gap-2 flex-shrink-0">
+    <%= link_to stripe_verification_admin_users_path,
+          class: "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-indigo-600/50 hover:border-indigo-500",
+          style: "background:rgba(99,102,241,0.12);color:#a5b4fc" do %>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+      Analyser
+    <% end %>
+  </div>
+</div>
+
 <script>
-  // ── Slide-over panel ──────────────────────────────────────────
+  // ── Slide-over panel ──────────────────────────────────────
   function openCreatePanel() {
     const overlay = document.getElementById('create-overlay');
     const panel   = document.getElementById('create-panel');
     overlay.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        panel.style.transform = 'translateX(0)';
-      });
-    });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      panel.style.transform = 'translateX(0)';
+    }));
     document.body.style.overflow = 'hidden';
   }
 
   function closeCreatePanel() {
-    const overlay = document.getElementById('create-overlay');
-    const panel   = document.getElementById('create-panel');
+    const panel = document.getElementById('create-panel');
     panel.style.transform = 'translateX(100%)';
     setTimeout(() => {
-      overlay.classList.add('hidden');
+      document.getElementById('create-overlay').classList.add('hidden');
       document.body.style.overflow = '';
     }, 300);
   }
 
-  // ── Plan selection ────────────────────────────────────────────
+  // ── Plan selection ─────────────────────────────────────────
   function handlePlanChange(slug) {
-    // Détermine si le plan est payant (a un prix > 0)
-    const planMeta  = (typeof PLANS_DATA !== 'undefined')
-      ? PLANS_DATA.find(p => p.slug === slug)
-      : null;
+    const planMeta = (typeof PLANS_DATA !== 'undefined') ? PLANS_DATA.find(p => p.slug === slug) : null;
     const isPaid = planMeta ? !planMeta.free : (slug !== 'free');
+    document.getElementById('premium-options').classList.toggle('hidden', !isPaid);
 
-    const premiumOpts = document.getElementById('premium-options');
-    isPaid ? premiumOpts.classList.remove('hidden') : premiumOpts.classList.add('hidden');
-
-    // Highlight radio sélectionné
-    document.querySelectorAll('.plan-radio-label').forEach(label => {
-      label.style.borderColor = '';
-    });
+    document.querySelectorAll('.plan-radio-label').forEach(l => l.style.borderColor = '');
     const selected = document.getElementById('plan-' + slug);
-    if (selected) {
-      selected.closest('.plan-radio-label').style.borderColor = '#C8FF00';
-    }
+    if (selected) selected.closest('.plan-radio-label').style.borderColor = '#C8FF00';
   }
 
-  // ── Premium duration presets ──────────────────────────────────
+  // ── Duration presets ───────────────────────────────────────
   function setDays(days) {
     document.getElementById('subscription-days').value = days;
     document.querySelectorAll('.days-preset').forEach(btn => {
@@ -415,17 +531,10 @@
     event.target.classList.add('bg-[#C8FF00]', 'text-black');
   }
 
-  // ── Trial toggle & presets ────────────────────────────────────
   function toggleTrial() {
-    const cb   = document.getElementById('trial-checkbox');
-    const opts = document.getElementById('trial-options');
-    // The checkbox state flips AFTER onclick on the label, so read after tick
+    const cb = document.getElementById('trial-checkbox');
     setTimeout(() => {
-      if (cb.checked) {
-        opts.classList.remove('hidden');
-      } else {
-        opts.classList.add('hidden');
-      }
+      document.getElementById('trial-options').classList.toggle('hidden', !cb.checked);
     }, 0);
   }
 
@@ -439,12 +548,12 @@
     event.target.classList.add('bg-purple-700', 'text-white');
   }
 
-  // ── Keyboard: Escape closes all panels ───────────────────────
-  document.addEventListener('keydown', function(e) {
+  // ── Keyboard ───────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeCreatePanel(); closeDeleteAllModal(); }
   });
 
-  // ── Modale suppression TOUS ───────────────────────────────────
+  // ── Modale suppression TOUS ────────────────────────────────
   function openDeleteAllModal(count) {
     document.getElementById('da-count').textContent = count;
     document.getElementById('da-password').value    = '';
@@ -461,7 +570,7 @@
 
   function submitDeleteAll() {
     const pwd = document.getElementById('da-password').value;
-    if (pwd !== 'dietvision') {
+    if (!pwd) {
       document.getElementById('da-error').classList.remove('hidden');
       document.getElementById('da-password').focus();
       return;

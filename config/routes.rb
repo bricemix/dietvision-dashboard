@@ -64,6 +64,11 @@ Rails.application.routes.draw do
       put    "user/missions",      to: "profile#missions_update"
       put    "user/meals",         to: "profile#meals_update"
 
+      # Chat coach (sync historique)
+      get    "chat/history",   to: "chat#index"
+      post   "chat/messages",  to: "chat#create"
+      delete "chat/history",   to: "chat#destroy"
+
       # Health check
       get    "health",         to: "health#show"
     end
@@ -123,10 +128,11 @@ Rails.application.routes.draw do
     post "trial/extend", to: "trial#extend_user_trial", as: :trial_extend
 
     # Codes promo
-    resources :promo_codes do
+    resources :promo_codes, only: %i[index new create edit update destroy show] do
       member do
         post :disable
         post :sync_stripe
+        post :send_report_test
       end
       collection { post :bulk_generate }
     end

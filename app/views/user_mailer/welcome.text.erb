@@ -1,31 +1,37 @@
-Bienvenue sur DietVision, <%= @user.name %> !
+<%= t("user_mailer.welcome.subject", app: "DietVision") %>
+<%= "=" * 50 %>
 
-Votre compte a bien été créé. Vous pouvez dès maintenant utiliser l'application
-pour analyser vos repas et suivre votre nutrition grâce à l'intelligence artificielle.
+<%= t("user_mailer.welcome.greeting", name: @user.name) %>
 
-------------------------------------------------------------
-CE QUE VOUS POUVEZ FAIRE
-------------------------------------------------------------
+<%= t("user_mailer.welcome.intro") %>
 
-📸 Analyse photo
-   Prenez en photo n'importe quel repas — l'IA identifie les aliments
-   et calcule les macronutriments en quelques secondes.
+<%= "-" * 50 %>
+<%= t("user_mailer.welcome.features_title") %>
+<%= "-" * 50 %>
 
-🤖 Coach IA personnalisé
-   Posez vos questions nutrition à votre coach virtuel, disponible 24h/24.
+📸 <%= t("user_mailer.welcome.feature_scan_title") %>
+   <%= t("user_mailer.welcome.feature_scan_body") %>
 
-📊 Suivi & statistiques
-   Visualisez votre progression, vos calories et vos macros jour après jour.
+🤖 <%= t("user_mailer.welcome.feature_coach_title") %>
+   <%= t("user_mailer.welcome.feature_coach_body") %>
 
-------------------------------------------------------------
-Plan gratuit — <%= AppConfig.free_daily_limit %> analyses par jour
-------------------------------------------------------------
+📊 <%= t("user_mailer.welcome.feature_stats_title") %>
+   <%= t("user_mailer.welcome.feature_stats_body") %>
 
-Ouvrir l'application : https://diet-vision.com
+<%= "-" * 50 %>
+<% trial_days = AppConfig.trial_period_days %>
+<% if @user.in_trial? && trial_days > 0 %>
+<%= t("user_mailer.welcome.trial_badge", days: trial_days, limit: AppConfig.trial_scan_daily_limit) %>
+<% else %>
+<%= t("user_mailer.welcome.free_badge", limit: AppConfig.free_scan_daily_limit) %>
+<% end %>
+<%= "-" * 50 %>
 
-------------------------------------------------------------
+<%= t("user_mailer.welcome.cta") %> : <%= AppConfig.get('email_app_url').presence || 'https://diet-vision.com' %>
 
-Une question ? Contactez-nous à <%= AppConfig.get('support_email') %>
+<%= "-" * 50 %>
+
+<%= t("user_mailer.welcome.support") %> <%= AppConfig.get('support_email') %>
 
 © <%= Date.current.year %> DietVision · https://diet-vision.com
-Vous recevez cet email car vous vous êtes inscrit sur DietVision.
+<%= t("user_mailer.welcome.footer") %>

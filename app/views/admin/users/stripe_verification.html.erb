@@ -1,0 +1,386 @@
+<% content_for :title, "Vérification Stripe" %>
+
+<%# ══════════════════════════════════════════════════════════
+    EN-TÊTE
+══════════════════════════════════════════════════════════ %>
+<div class="flex items-center gap-3 mb-6">
+  <%= link_to admin_users_path, class: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 text-sm transition-colors" do %>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Utilisateurs
+  <% end %>
+  <div class="flex-1">
+    <h1 class="text-xl font-bold text-white">🔍 Vérification Stripe / DB</h1>
+    <p class="text-xs text-gray-500 mt-0.5">Cohérence entre les paiements Stripe et l'état des abonnements en base</p>
+  </div>
+  <%# Bouton vérification live %>
+  <%= button_to stripe_verification_live_admin_users_path,
+        method: :post,
+        class: "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors",
+        style: "background:#6366f1;color:white",
+        data: { confirm: "Cela va appeler l'API Stripe pour chaque abonnement actif. Continuer ?" } do %>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    Vérifier via Stripe API
+  <% end %>
+</div>
+
+<%# Erreur Stripe API %>
+<% if @live_error.present? %>
+  <div class="mb-5 p-4 bg-red-950/60 border border-red-800/60 rounded-xl text-sm text-red-300 flex items-start gap-3">
+    <span class="text-lg">⚠️</span>
+    <div><strong>Erreur API Stripe :</strong> <%= @live_error %></div>
+  </div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    RÉSUMÉ KPI
+══════════════════════════════════════════════════════════ %>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <%
+    total = @issues.values.sum { |v| v.respond_to?(:size) ? v.size : 0 } + (@live_issues&.size || 0)
+    kpis = [
+      { label: "Anomalies DB",          value: @issues.values.sum { |v| v.size },  color: total > 0 ? "text-orange-400" : "text-green-400", icon: "🗄" },
+      { label: "Clients Stripe",        value: @summary[:stripe_users],             color: "text-indigo-400",  icon: "👤" },
+      { label: "Abonnements actifs",    value: @summary[:active_stripe_subs],       color: "text-[#C8FF00]",   icon: "✅" },
+      { label: "Paiements Stripe OK",   value: @summary[:total_payments_stripe],    color: "text-green-400",   icon: "💳" },
+    ]
+  %>
+  <% kpis.each do |k| %>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
+      <div class="text-xs text-gray-500 flex items-center gap-1.5 mb-1"><span><%= k[:icon] %></span><span><%= k[:label] %></span></div>
+      <div class="text-2xl font-bold <%= k[:color] %>"><%= k[:value] %></div>
+    </div>
+  <% end %>
+</div>
+
+<% if total == 0 %>
+  <div class="p-8 text-center bg-gray-900 border border-gray-800 rounded-2xl">
+    <div class="text-4xl mb-3">✅</div>
+    <div class="text-lg font-bold text-green-400">Tout est cohérent</div>
+    <div class="text-sm text-gray-500 mt-1">Aucune anomalie détectée entre Stripe et la base de données.</div>
+  </div>
+<% else %>
+
+<%# ══════════════════════════════════════════════════════════
+    ANOMALIES LIVE STRIPE API
+══════════════════════════════════════════════════════════ %>
+<% if @live_checked && @live_issues&.any? %>
+  <%= render "stripe_issue_section",
+        title:   "Stripe API — Statuts incohérents",
+        icon:    "🟣",
+        color:   "indigo",
+        issues:  @live_issues,
+        columns: ["Utilisateur", "Abonnement DB", "Détail", "Action suggérée"],
+        rows: @live_issues.map { |i|
+          [
+            link_to(i[:user]&.name || "—", admin_user_path(i[:user].id), class: "text-indigo-400 hover:underline font-medium"),
+            i[:sub] ? content_tag(:span, "#{i[:sub].plan} · #{i[:sub].stripe_subscription_id}", class: "font-mono text-xs text-gray-400") : "—",
+            content_tag(:span, i[:detail], class: "text-orange-300 text-xs"),
+            content_tag(:span, i[:action], class: "text-gray-400 text-xs"),
+          ]
+        } %>
+<% elsif @live_checked %>
+  <div class="mb-5 p-4 bg-green-950/40 border border-green-800/40 rounded-xl text-sm text-green-300 flex items-center gap-3">
+    <span class="text-lg">✅</span>
+    <div>Vérification Stripe API terminée — aucune anomalie détectée côté Stripe.</div>
+  </div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    1. PREMIUM SANS ABONNEMENT ACTIF
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:premium_no_active_sub].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">🔴</span>
+    <h2 class="font-bold text-white text-sm">Plan premium en DB — mais aucun abonnement actif</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300"><%= @issues[:premium_no_active_sub].size %></span>
+  </div>
+  <div class="bg-gray-900 border border-red-900/40 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">Plan DB</th>
+          <th class="px-4 py-2.5 text-left">Expiration DB</th>
+          <th class="px-4 py-2.5 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:premium_no_active_sub].each do |u| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to u.name, admin_user_path(u.id), class: "text-[#C8FF00] hover:underline font-medium" %>
+              <div class="text-xs text-gray-500"><%= u.email %></div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-900/50 text-yellow-300"><%= u.plan %></span>
+            </td>
+            <td class="px-4 py-3 text-xs text-red-400">
+              <%= u.subscription_expires_at ? u.subscription_expires_at.strftime("%d/%m/%Y %H:%M") + " (expiré)" : "—" %>
+            </td>
+            <td class="px-4 py-3">
+              <%= link_to "Voir", admin_user_path(u.id), class: "text-xs px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    2. ABONNEMENTS ACTIFS EXPIRÉS EN DB
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:sub_active_but_expired].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">🟠</span>
+    <h2 class="font-bold text-white text-sm">Abonnements marqués 'active' mais expires_at dépassé</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-orange-900/60 text-orange-300"><%= @issues[:sub_active_but_expired].size %></span>
+  </div>
+  <div class="bg-gray-900 border border-orange-900/40 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">Plan</th>
+          <th class="px-4 py-2.5 text-left">Expiré le</th>
+          <th class="px-4 py-2.5 text-left">ID Stripe</th>
+          <th class="px-4 py-2.5 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:sub_active_but_expired].each do |sub| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to sub.user.name, admin_user_path(sub.user_id), class: "text-[#C8FF00] hover:underline font-medium" %>
+              <div class="text-xs text-gray-500"><%= sub.user.email %></div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-gray-300"><%= sub.plan %></span>
+            </td>
+            <td class="px-4 py-3 text-xs text-red-400">
+              <%= sub.expires_at&.strftime("%d/%m/%Y %H:%M") %>
+              <div class="text-gray-500">il y a <%= distance_of_time_in_words(sub.expires_at, Time.current) %></div>
+            </td>
+            <td class="px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-[160px]">
+              <% if sub.stripe_subscription_id.present? %>
+                <a href="https://dashboard.stripe.com/subscriptions/<%= sub.stripe_subscription_id %>"
+                   target="_blank" class="text-indigo-400 hover:underline">
+                  <%= sub.stripe_subscription_id %>
+                </a>
+              <% else %>—<% end %>
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-xs text-orange-400">Statut à corriger → expired</span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    3. DÉSYNCHRONISATION expires_at
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:expires_at_mismatch].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">🟡</span>
+    <h2 class="font-bold text-white text-sm">Désynchronisation expires_at (User ≠ Subscription)</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-900/60 text-yellow-300"><%= @issues[:expires_at_mismatch].size %></span>
+  </div>
+  <div class="bg-gray-900 border border-yellow-900/40 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">expires_at User</th>
+          <th class="px-4 py-2.5 text-left">expires_at Subscription</th>
+          <th class="px-4 py-2.5 text-left">Écart</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:expires_at_mismatch].each do |item| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to item[:user].name, admin_user_path(item[:user].id), class: "text-[#C8FF00] hover:underline font-medium" %>
+            </td>
+            <td class="px-4 py-3 text-xs text-yellow-300">
+              <%= item[:user].subscription_expires_at&.strftime("%d/%m/%Y %H:%M") %>
+            </td>
+            <td class="px-4 py-3 text-xs text-yellow-300">
+              <%= item[:sub].expires_at&.strftime("%d/%m/%Y %H:%M") %>
+            </td>
+            <td class="px-4 py-3 text-xs text-orange-400 font-medium">
+              <%= item[:diff_days] %> jour<%= "s" if item[:diff_days] != 1 %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    4. PAIEMENTS STRIPE OK SANS ABONNEMENT ACTIF
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:payment_success_no_active_sub].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">🔵</span>
+    <h2 class="font-bold text-white text-sm">Paiements Stripe réussis — abonnement DB non actif (30 derniers jours)</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-blue-900/60 text-blue-300"><%= @issues[:payment_success_no_active_sub].size %></span>
+  </div>
+  <div class="bg-gray-900 border border-blue-900/40 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">Montant</th>
+          <th class="px-4 py-2.5 text-left">Date paiement</th>
+          <th class="px-4 py-2.5 text-left">Transaction ID</th>
+          <th class="px-4 py-2.5 text-left">Statut abonnement</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:payment_success_no_active_sub].each do |p| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to p.user.name, admin_user_path(p.user_id), class: "text-[#C8FF00] hover:underline font-medium" %>
+              <div class="text-xs text-gray-500"><%= p.user.email %></div>
+            </td>
+            <td class="px-4 py-3 font-medium text-green-400">
+              <%= number_to_currency(p.amount / 100.0, unit: "$") %>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-400">
+              <%= p.paid_at&.strftime("%d/%m/%Y %H:%M") %>
+            </td>
+            <td class="px-4 py-3 font-mono text-xs text-gray-500"><%= p.transaction_id %></td>
+            <td class="px-4 py-3">
+              <% sub_status = p.subscription&.status || "aucun" %>
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                <%= sub_status == 'active' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300' %>">
+                <%= sub_status %>
+              </span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    5. CUSTOMER STRIPE MAIS PLAN FREE
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:stripe_customer_plan_free].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">⚪</span>
+    <h2 class="font-bold text-white text-sm">Clients Stripe enregistrés — mais plan 'free' en DB (> 7 jours)</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-gray-700 text-gray-300"><%= @issues[:stripe_customer_plan_free].size %></span>
+  </div>
+  <p class="text-xs text-gray-500 mb-3">Ces utilisateurs ont un customer_id Stripe mais leur plan est 'free'. Peut indiquer un paiement raté, un remboursement, ou une désynchronisation.</p>
+  <div class="bg-gray-900 border border-gray-700/60 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">Stripe Customer ID</th>
+          <th class="px-4 py-2.5 text-left">Inscription</th>
+          <th class="px-4 py-2.5 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:stripe_customer_plan_free].each do |u| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to u.name, admin_user_path(u.id), class: "text-[#C8FF00] hover:underline font-medium" %>
+              <div class="text-xs text-gray-500"><%= u.email %></div>
+            </td>
+            <td class="px-4 py-3">
+              <a href="https://dashboard.stripe.com/customers/<%= u.stripe_customer_id %>"
+                 target="_blank"
+                 class="font-mono text-xs text-indigo-400 hover:underline"><%= u.stripe_customer_id %></a>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500"><%= u.created_at.strftime("%d/%m/%Y") %></td>
+            <td class="px-4 py-3">
+              <a href="https://dashboard.stripe.com/customers/<%= u.stripe_customer_id %>"
+                 target="_blank"
+                 class="text-xs px-3 py-1 rounded-lg bg-indigo-900/50 hover:bg-indigo-900 text-indigo-300 transition-colors">
+                Voir sur Stripe ↗
+              </a>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<%# ══════════════════════════════════════════════════════════
+    6. ABONNEMENT STRIPE SANS CUSTOMER ID
+══════════════════════════════════════════════════════════ %>
+<% if @issues[:sub_stripe_no_customer].any? %>
+<div class="mb-5">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-base">🟤</span>
+    <h2 class="font-bold text-white text-sm">Abonnements Stripe en DB — sans stripe_customer_id sur l'utilisateur</h2>
+    <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300"><%= @issues[:sub_stripe_no_customer].size %></span>
+  </div>
+  <div class="bg-gray-900 border border-amber-900/40 rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Utilisateur</th>
+          <th class="px-4 py-2.5 text-left">stripe_subscription_id</th>
+          <th class="px-4 py-2.5 text-left">Statut</th>
+          <th class="px-4 py-2.5 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        <% @issues[:sub_stripe_no_customer].each do |sub| %>
+          <tr class="hover:bg-gray-800/50 transition-colors">
+            <td class="px-4 py-3">
+              <%= link_to sub.user.name, admin_user_path(sub.user_id), class: "text-[#C8FF00] hover:underline font-medium" %>
+            </td>
+            <td class="px-4 py-3 font-mono text-xs">
+              <a href="https://dashboard.stripe.com/subscriptions/<%= sub.stripe_subscription_id %>"
+                 target="_blank" class="text-indigo-400 hover:underline"><%= sub.stripe_subscription_id %></a>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-900/50 text-amber-300"><%= sub.status %></span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">Ajouter stripe_customer_id à l'utilisateur</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<% end %><%# end if total == 0 %>
+
+<%# ══════════════════════════════════════════════════════════
+    LÉGENDE
+══════════════════════════════════════════════════════════ %>
+<div class="mt-8 p-4 bg-gray-900/60 border border-gray-800 rounded-xl text-xs text-gray-500 space-y-1.5">
+  <div class="text-gray-400 font-semibold mb-2">ℹ️ Comment interpréter ces résultats</div>
+  <div>🔴 <strong class="text-gray-300">Premium sans abonnement</strong> — L'utilisateur a un plan non-free mais aucun Subscription actif ne le justifie. Peut nécessiter une correction manuelle ou une resynchronisation Stripe.</div>
+  <div>🟠 <strong class="text-gray-300">Abonnement expiré non marqué</strong> — Le statut est encore 'active' mais la date est passée. Le webhook Stripe n'a probablement pas été reçu. Corriger via l'action "Vérifier via Stripe API".</div>
+  <div>🟡 <strong class="text-gray-300">Désynchronisation dates</strong> — La date d'expiration sur l'utilisateur et sur l'abonnement diffèrent. Indique une mise à jour partielle.</div>
+  <div>🔵 <strong class="text-gray-300">Paiement sans abonnement actif</strong> — Un paiement a réussi mais l'abonnement correspondant n'est pas actif. Peut indiquer un bug webhook.</div>
+  <div>⚪ <strong class="text-gray-300">Customer Stripe plan free</strong> — Information : surveiller sans action immédiate sauf si suspect.</div>
+  <div>🟣 <strong class="text-gray-300">Vérification Stripe API</strong> — Compare le statut réel sur Stripe avec celui en DB. Nécessite une clé API valide.</div>
+</div>

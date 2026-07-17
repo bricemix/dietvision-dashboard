@@ -47,6 +47,11 @@ class Rack::Attack
     req.ip if req.path == "/api/v1/auth/forgot_password" && req.post?
   end
 
+  # Throttle : inscription (spam de comptes) — 5 par IP / 10 min
+  throttle("api/register/ip", limit: 5, period: 10.minutes) do |req|
+    req.ip if req.path == "/api/v1/auth/register" && req.post?
+  end
+
   # ── Throttle : login admin (BUG-07) ──────────────────────────────────────────
   # 5 tentatives par IP sur 5 minutes sur le login admin
   throttle("admin/login/ip", limit: 5, period: 5.minutes) do |req|

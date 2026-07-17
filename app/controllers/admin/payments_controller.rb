@@ -1,7 +1,7 @@
 module Admin
   class PaymentsController < BaseController
     def index
-      scope = Payment.includes(:user).order(created_at: :desc)
+      scope = Payment.includes(:user, :subscription).order(created_at: :desc)
       scope = scope.where(status:   params[:status])   if params[:status].present?
       scope = scope.where(provider: params[:provider]) if params[:provider].present?
 
